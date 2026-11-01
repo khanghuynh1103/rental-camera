@@ -12,8 +12,9 @@ Website thuê máy ảnh và thiết bị quay chụp, xây dựng bằng React,
 - Tạo đơn thuê, chọn giao tận nơi hoặc nhận tại cửa hàng.
 - Thanh toán và xuất hóa đơn mô phỏng.
 - Trang khách hàng để theo dõi đơn, cập nhật hồ sơ, yêu cầu gia hạn và thanh toán phí phát sinh.
-- Trang quản trị để theo dõi doanh thu, duyệt đơn, quản lý sản phẩm, kho thiết bị, người dùng, gia hạn và sự cố.
-- Trang nhân viên giao nhận để cập nhật quá trình giao, bàn giao và thu hồi thiết bị.
+- Khách chỉ có thể gửi yêu cầu gia hạn trước hạn trả ít nhất 3 ngày; quản trị viên kiểm tra xung đột lịch trước khi duyệt.
+- Trang quản trị để theo dõi doanh thu, duyệt đơn, phân công nhân viên giao nhận, quản lý sản phẩm, kho thiết bị, người dùng, gia hạn và sự cố.
+- Trang nhân viên giao nhận chỉ hiển thị đơn được phân công, hỗ trợ chụp ảnh bằng chứng khi bàn giao và thu hồi thiết bị.
 - Đánh giá sản phẩm sau khi hoàn tất đơn thuê.
 - Trợ lý gợi ý thiết bị; có thể dùng OpenAI hoặc tự gợi ý từ dữ liệu PostgreSQL khi không cấu hình API key.
 - Giao diện responsive, nội dung tiếng Việt.
@@ -69,7 +70,7 @@ Website thuê máy ảnh và thiết bị quay chụp, xây dựng bằng React,
 
    `OPENAI_API_KEY` là tùy chọn. Không có khóa này, tính năng chat vẫn gợi ý sản phẩm dựa trên dữ liệu trong PostgreSQL.
 
-5. Chuẩn bị database và chạy các migration phù hợp. Xem lưu ý [Khởi tạo cơ sở dữ liệu](#khởi-tạo-cơ-sở-dữ-liệu) bên dưới.
+5. Khởi tạo schema và dữ liệu mẫu theo hướng dẫn [Khởi tạo cơ sở dữ liệu](#khởi-tạo-cơ-sở-dữ-liệu) bên dưới.
 
 6. Chạy ứng dụng ở chế độ phát triển:
 
@@ -84,27 +85,19 @@ Vite tự chuyển tiếp các request `/api` từ cổng `5173` sang backend �
 
 ## Khởi tạo cơ sở dữ liệu
 
-Các migration trong repository hiện **không tạo toàn bộ schema lõi từ một database trống**. Chúng giả định các bảng chính như `users`, `categories`, `products`, `product_images`, `equipment_items`, `rentals`, `rental_items`, `payments` và `invoices` đã tồn tại.
-
-Repository hiện chưa có file SQL/schema ban đầu cho các bảng này. Vì vậy, để cài mới hoàn toàn, bạn cần khôi phục schema PostgreSQL đã được dùng cho dự án hoặc bổ sung migration khởi tạo schema lõi trước khi chạy các lệnh bên dưới.
-
-Khi schema lõi đã sẵn sàng, thứ tự khuyến nghị là:
+Với database PostgreSQL trống, chạy theo thứ tự:
 
 ```bash
-npm run migrate:users
+npm run migrate:schema
 npm run migrate:products
-npm run migrate:sessions
-npm run migrate:rentals
-npm run migrate:rental-workflow
-npm run migrate:delivery-workflow
-npm run migrate:post-rental
-npm run migrate:reviews
 npm run seed:roles
 ```
 
-Các script được thiết kế để có thể chạy lại an toàn ở phần lớn thao tác (`IF NOT EXISTS`, `ON CONFLICT`), nhưng vẫn nên sao lưu database trước khi migration trên dữ liệu quan trọng.
+`migrate:schema` tạo đầy đủ bảng, khóa ngoại và index cần thiết. `migrate:products` nạp danh mục, sản phẩm, ảnh và các thiết bị vật lý; `seed:roles` tạo tài khoản quản trị và giao nhận mẫu.
 
-`migrate:users` và `migrate:rentals` nhập dữ liệu cũ từ `data/database.json`. File này là dữ liệu cục bộ, được bỏ qua bởi Git và có thể không tồn tại trong một bản clone mới.
+Các migration được thiết kế để có thể chạy lại an toàn ở phần lớn thao tác (`IF NOT EXISTS`, `ON CONFLICT`), nhưng vẫn nên sao lưu database trước khi migration trên dữ liệu quan trọng.
+
+Nếu nâng cấp một database cũ, chạy thêm các migration chuyên biệt trong bảng lệnh bên dưới. `migrate:users` và `migrate:rentals` chỉ dùng để nhập dữ liệu cũ từ `data/database.json`; chúng không cần thiết cho cài đặt mới.
 
 ## Tài khoản mẫu
 
@@ -126,6 +119,7 @@ Sau khi chạy `npm run seed:roles`, hệ thống tạo/cập nhật:
 | `npm start` | Build frontend rồi chạy Express ở chế độ phục vụ ứng dụng. |
 | `npm run check` | Kiểm tra mã nguồn bằng ESLint. |
 | `npm run test:workflow` | Chạy kiểm thử tích hợp cho quy trình thuê/giao nhận. |
+| `npm run migrate:schema` | Tạo đầy đủ schema PostgreSQL từ database trống. |
 | `npm run migrate:users` | Nhập người dùng cũ vào PostgreSQL. |
 | `npm run migrate:products` | Nhập/cập nhật danh mục, sản phẩm, ảnh và thiết bị kho. |
 | `npm run migrate:rentals` | Nhập đơn thuê cũ và bổ sung các cột liên quan. |
@@ -193,8 +187,8 @@ Kiểm thử workflow tạo và thay đổi dữ liệu. Chỉ chạy trên data
 
 ## Hạn chế hiện tại
 
-- Chưa có migration/schema khởi tạo đầy đủ cho database mới.
 - Chưa có bộ test unit/frontend tự động; hiện chỉ có kiểm thử workflow backend.
 - Thanh toán, hóa đơn và các kênh VNPAY/ATM/thẻ đều là dữ liệu mô phỏng.
-- Việc upload ảnh chưa được tích hợp; quản trị viên nhập URL ảnh sản phẩm.
+- Ảnh bằng chứng giao nhận hiện được lưu trực tiếp trong PostgreSQL để phù hợp môi trường demo; production nên chuyển sang object storage.
+- Ảnh sản phẩm do quản trị viên quản lý bằng URL, chưa có kho upload riêng.
 

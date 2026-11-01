@@ -27,6 +27,9 @@ router.post('/account/rentals/:id/extensions',...customerOnly,async(req,res)=>{
   if(!rental.rowCount)return res.status(404).json({message:'Không tìm thấy đơn thuê.'});
   const row=rental.rows[0],oldEnd=new Date(row.end_date);
   if(!['CONFIRMED','DELIVERING','RENTING'].includes(row.status))return res.status(409).json({message:'Đơn thuê hiện không thể gia hạn.'});
+  const today=new Date();today.setHours(0,0,0,0);oldEnd.setHours(0,0,0,0);
+  const daysBeforeReturn=Math.ceil((oldEnd-today)/86400000);
+  if(daysBeforeReturn<3)return res.status(409).json({message:'Yêu cầu gia hạn phải được gửi trước hạn trả ít nhất 3 ngày.'});
   if(requested<=oldEnd)return res.status(422).json({message:'Ngày trả mới phải sau ngày trả hiện tại.'});
   try{const result=await query(`INSERT INTO rental_extensions(rental_id,old_end_date,requested_end_date,reason) VALUES($1,$2,$3,$4) RETURNING id`,[row.id,row.end_date,req.body.requestedEndDate,reason||null]);res.status(201).json({message:'Đã gửi yêu cầu gia hạn.',id:result.rows[0].id})}catch(error){if(error.code==='23505')return res.status(409).json({message:'Đơn này đang có một yêu cầu gia hạn chờ duyệt.'});throw error}
 });

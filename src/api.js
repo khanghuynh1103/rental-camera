@@ -27,6 +27,8 @@ export const api = {
   adminDashboard: (filters={}) => request(`/api/admin/dashboard?${new URLSearchParams(filters)}`),
   adminRentals: (filters={}) => request(`/api/admin/rentals?${new URLSearchParams(filters)}`),
   adminRental: id => request(`/api/admin/rentals/${id}`),
+  deliveryStaff: () => request('/api/admin/delivery-staff'),
+  assignDeliveryStaff: (id, staffId) => request(`/api/admin/rentals/${id}/assignment`, { method: 'PATCH', body: JSON.stringify({ staffId }) }),
   updateRentalStatus: (id, values) => request(`/api/admin/rentals/${id}/status`, { method: 'PATCH', body: JSON.stringify(values) }),
   adminUsers: () => request('/api/admin/users'),
   adminCategories: () => request('/api/admin/categories'),

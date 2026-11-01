@@ -9,7 +9,7 @@ const app=express();
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const port=Number(process.env.PORT)||3000;
 app.disable('x-powered-by');
-app.use(express.json({limit:'100kb'}));
+app.use(express.json({limit:'8mb'}));
 app.use(cookieParser());
 app.use('/api',routes);
 app.use(express.static(path.join(root,'dist')));

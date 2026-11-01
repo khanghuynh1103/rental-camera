@@ -7,6 +7,7 @@
     "dev": "concurrently \"node --watch server/index.js\" \"vite\"",
     "build": "vite build",
     "start": "npm run build && node server/index.js",
+    "migrate:schema": "node server/migrate-schema.js",
     "migrate:users": "node server/migrate-users.js",
     "migrate:products": "node server/migrate-products.js",
     "migrate:rentals": "node server/migrate-rentals.js",

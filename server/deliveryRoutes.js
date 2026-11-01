@@ -8,12 +8,13 @@ const taskStatuses=['CONFIRMED','DELIVERING','RENTING','RETURNING'];
 const transitions={CONFIRMED:'DELIVERING',DELIVERING:'RENTING',RENTING:'RETURNING',RETURNING:'COMPLETED'};
 const inspections=['GOOD','SCRATCHED','DAMAGED','MISSING_ACCESSORIES'];
 const clean=value=>String(value??'').trim();
+const proofPattern=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 
 router.get('/delivery/tasks',...staffOnly,async(req,res)=>{
   const page=Math.max(1,Number.parseInt(req.query.page)||1),limit=10,offset=(page-1)*limit,status=clean(req.query.status),date=clean(req.query.date)||null;
   if(status&&!taskStatuses.includes(status))return res.status(422).json({message:'Trạng thái lọc không hợp lệ.'});
-  const params=[taskStatuses,status,date,limit,offset];
-  const where=`WHERE r.delivery_method='delivery' AND r.status=ANY($1::VARCHAR[]) AND ($2='' OR r.status=$2)
+  const params=[taskStatuses,status,date,req.user.id,limit,offset];
+  const where=`WHERE r.delivery_method='delivery' AND r.assigned_delivery_staff_id=$4 AND r.status=ANY($1::VARCHAR[]) AND ($2='' OR r.status=$2)
     AND ($3::DATE IS NULL OR r.start_date=$3::DATE OR r.end_date=$3::DATE)`;
   const [items,count]=await Promise.all([
     query(`SELECT r.id,r.rental_code AS code,r.full_name AS "customerName",r.phone,r.delivery_address AS address,
@@ -21,8 +22,8 @@ router.get('/delivery/tasks',...staffOnly,async(req,res)=>{
       STRING_AGG(DISTINCT p.name,', ') AS "productName",STRING_AGG(DISTINCT e.equipment_code,', ') AS "equipmentCode"
       FROM rentals r JOIN rental_items ri ON ri.rental_id=r.id JOIN products p ON p.id=ri.product_id
       LEFT JOIN equipment_items e ON e.id=ri.equipment_item_id ${where}
-      GROUP BY r.id ORDER BY CASE WHEN r.status='RETURNING' THEN 1 WHEN r.status='CONFIRMED' THEN 2 ELSE 3 END,r.start_date LIMIT $4 OFFSET $5`,params),
-    query(`SELECT COUNT(DISTINCT r.id)::INT AS total FROM rentals r ${where}`,params.slice(0,3))
+      GROUP BY r.id ORDER BY CASE WHEN r.status='RETURNING' THEN 1 WHEN r.status='CONFIRMED' THEN 2 ELSE 3 END,r.start_date LIMIT $5 OFFSET $6`,params),
+    query(`SELECT COUNT(DISTINCT r.id)::INT AS total FROM rentals r ${where}`,params.slice(0,4))
   ]);
   const total=count.rows[0].total;res.json({tasks:items.rows,page,total,totalPages:Math.max(1,Math.ceil(total/limit))});
 });
@@ -31,10 +32,10 @@ router.get('/delivery/tasks/:id',...staffOnly,async(req,res)=>{
   const [rental,items,logs]=await Promise.all([
     query(`SELECT id,rental_code AS code,full_name AS "customerName",phone,email,start_date AS "startDate",end_date AS "endDate",
       delivery_address AS address,delivery_time AS "deliveryTime",return_time AS "returnTime",note,status
-      FROM rentals WHERE id=$1 AND delivery_method='delivery'`,[req.params.id]),
+      FROM rentals WHERE id=$1 AND delivery_method='delivery' AND assigned_delivery_staff_id=$2`,[req.params.id,req.user.id]),
     query(`SELECT ri.equipment_item_id AS "equipmentId",p.name AS "productName",e.equipment_code AS "equipmentCode",e.condition,e.status AS "equipmentStatus"
       FROM rental_items ri JOIN products p ON p.id=ri.product_id LEFT JOIN equipment_items e ON e.id=ri.equipment_item_id WHERE ri.rental_id=$1`,[req.params.id]),
-    query(`SELECT l.id,l.action,l.inspection_result AS "inspectionResult",l.note,l.created_at AS "createdAt",u.full_name AS "createdBy"
+    query(`SELECT l.id,l.action,l.inspection_result AS "inspectionResult",l.note,l.proof_image AS "proofImage",l.created_at AS "createdAt",u.full_name AS "createdBy"
       FROM delivery_logs l LEFT JOIN users u ON u.id=l.created_by WHERE l.rental_id=$1 ORDER BY l.created_at DESC`,[req.params.id])
   ]);
   if(!rental.rowCount)return res.status(404).json({message:'Không tìm thấy công việc giao nhận.'});
@@ -44,14 +45,16 @@ router.get('/delivery/tasks/:id',...staffOnly,async(req,res)=>{
 });
 
 router.patch('/delivery/tasks/:id/status',...staffOnly,async(req,res)=>{
-  const requested=clean(req.body.status).toUpperCase(),note=clean(req.body.note),inspection=clean(req.body.inspectionResult).toUpperCase();
+  const requested=clean(req.body.status).toUpperCase(),note=clean(req.body.note),inspection=clean(req.body.inspectionResult).toUpperCase(),proofImage=clean(req.body.proofImage);
   const client=await pool.connect();
   try{
     await client.query('BEGIN');
-    const found=await client.query("SELECT * FROM rentals WHERE id=$1 AND delivery_method='delivery' FOR UPDATE",[req.params.id]);
+    const found=await client.query("SELECT * FROM rentals WHERE id=$1 AND delivery_method='delivery' AND assigned_delivery_staff_id=$2 FOR UPDATE",[req.params.id,req.user.id]);
     if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({message:'Không tìm thấy công việc giao nhận.'})}
     const rental=found.rows[0],expected=transitions[rental.status];
     if(!expected||requested!==expected){await client.query('ROLLBACK');return res.status(409).json({message:'Không thể thực hiện bước này với trạng thái hiện tại.'})}
+    if(['RENTING','COMPLETED'].includes(requested)&&!proofImage){await client.query('ROLLBACK');return res.status(422).json({message:'Vui lòng chụp hoặc chọn ảnh bằng chứng bàn giao/thu hồi.'})}
+    if(proofImage&&(!proofPattern.test(proofImage)||Buffer.byteLength(proofImage,'utf8')>7*1024*1024)){await client.query('ROLLBACK');return res.status(422).json({message:'Ảnh bằng chứng phải là JPEG, PNG hoặc WebP và không quá 5 MB.'})}
     if(requested==='COMPLETED'&&!inspections.includes(inspection)){await client.query('ROLLBACK');return res.status(422).json({message:'Vui lòng kiểm tra tình trạng thiết bị khi thu hồi.'})}
     if(requested==='COMPLETED'&&inspection!=='GOOD'&&!note){await client.query('ROLLBACK');return res.status(422).json({message:'Vui lòng mô tả tình trạng hoặc phụ kiện bị thiếu.'})}
     const equipment=await client.query('SELECT equipment_item_id FROM rental_items WHERE rental_id=$1',[rental.id]);
@@ -64,7 +67,7 @@ router.patch('/delivery/tasks/:id/status',...staffOnly,async(req,res)=>{
     }
     await client.query('UPDATE rentals SET status=$1 WHERE id=$2',[requested,rental.id]);
     await client.query('INSERT INTO rental_status_history(rental_id,from_status,to_status,note,changed_by) VALUES($1,$2,$3,$4,$5)',[rental.id,rental.status,requested,note||null,req.user.id]);
-    await client.query('INSERT INTO delivery_logs(rental_id,action,inspection_result,note,created_by) VALUES($1,$2,$3,$4,$5)',[rental.id,requested,inspection||null,note||null,req.user.id]);
+    await client.query('INSERT INTO delivery_logs(rental_id,action,inspection_result,note,proof_image,created_by) VALUES($1,$2,$3,$4,$5,$6)',[rental.id,requested,inspection||null,note||null,proofImage||null,req.user.id]);
     await client.query('COMMIT');res.json({message:requested==='COMPLETED'?'Đã hoàn tất thu hồi và cập nhật kho.':'Đã cập nhật công việc giao nhận.',status:requested});
   }catch(error){await client.query('ROLLBACK');throw error}finally{client.release()}
 });

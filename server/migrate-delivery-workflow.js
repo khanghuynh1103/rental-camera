@@ -11,6 +11,9 @@ try{
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`);
+  await query('ALTER TABLE rentals ADD COLUMN IF NOT EXISTS assigned_delivery_staff_id UUID REFERENCES users(id) ON DELETE SET NULL');
+  await query('ALTER TABLE delivery_logs ADD COLUMN IF NOT EXISTS proof_image TEXT');
+  await query('CREATE INDEX IF NOT EXISTS idx_rentals_assignment ON rentals(assigned_delivery_staff_id,status)');
   await query('CREATE INDEX IF NOT EXISTS idx_delivery_logs_rental ON delivery_logs(rental_id,created_at)');
   await query(`CREATE TABLE IF NOT EXISTS rental_incidents (
     id BIGSERIAL PRIMARY KEY,

@@ -101,15 +101,24 @@ try{
   const adminList=await ok(`/admin/rentals?q=${rental.code}`,{},adminCookie);check(adminList.data.total===1,'Quản trị tìm thấy đơn');
   await ok(`/admin/rentals/${rentalId}/status`,json('PATCH',{status:'CONFIRMED',note:'Duyệt bởi kiểm thử tự động'}),adminCookie);results.push('Quản trị duyệt đơn');
 
+  await query("UPDATE rentals SET start_date=CURRENT_DATE-1,end_date=CURRENT_DATE+2 WHERE id=$1",[rentalId]);
+  const lateExtension=await request(`/account/rentals/${rentalId}/extensions`,json('POST',{requestedEndDate:new Date(Date.now()+3*86400000).toISOString().slice(0,10),reason:'Yêu cầu quá sát hạn'}),customerCookie);
+  check(lateExtension.status===409,'Chặn yêu cầu gia hạn khi còn dưới 3 ngày');
+  await query("UPDATE rentals SET start_date='2035-05-20',end_date='2035-05-21' WHERE id=$1",[rentalId]);
   await ok(`/account/rentals/${rentalId}/extensions`,json('POST',{requestedEndDate:'2035-05-23',reason:'Kiểm thử gia hạn hai ngày'}),customerCookie);results.push('Khách gửi yêu cầu gia hạn');
   const extensions=await ok('/admin/extensions',{},adminCookie);const extension=extensions.data.extensions.find(item=>item.rentalId===rentalId);check(Boolean(extension),'Quản trị nhận yêu cầu gia hạn');
   const extensionReview=await ok(`/admin/extensions/${extension.id}`,json('PATCH',{status:'APPROVED'}),adminCookie);check(extensionReview.data.extraAmount>0,'Duyệt và tính phí gia hạn');
 
-  const staffLogin=await ok('/auth/login',json('POST',{email:'giaonhan@trammayanh.vn',password:'Giaonhan@123'}));const staffCookie=staffLogin.cookie;
+  const staffList=await ok('/admin/delivery-staff',{},adminCookie);const assignedStaff=staffList.data.staff.find(item=>item.email==='giaonhan@trammayanh.vn');check(Boolean(assignedStaff),'Có nhân viên giao nhận để phân công');
+  await ok(`/admin/rentals/${rentalId}/assignment`,json('PATCH',{staffId:assignedStaff.id}),adminCookie);results.push('Quản trị phân công nhân viên giao nhận');
+  const staffLogin=await ok('/auth/login',json('POST',{email:assignedStaff.email,password:'Giaonhan@123'}));const staffCookie=staffLogin.cookie;
   const staffForbidden=await request('/admin/products',{},staffCookie);check(staffForbidden.status===403,'Phân quyền nhân viên giao nhận');
   const tasks=await ok('/delivery/tasks?status=CONFIRMED',{},staffCookie);check(tasks.data.tasks.some(item=>item.id===rentalId),'Đơn xuất hiện tại giao nhận');
-  for(const status of ['DELIVERING','RENTING','RETURNING'])await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status,note:`Kiểm thử ${status}`}),staffCookie);
-  await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'COMPLETED',inspectionResult:'MISSING_ACCESSORIES',note:'Thiếu nắp ống kính trong kiểm thử'}),staffCookie);results.push('Hoàn tất giao nhận và tạo sự cố');
+  const proofImage='data:image/jpeg;base64,/9j/2Q==';
+  await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'DELIVERING',note:'Kiểm thử DELIVERING'}),staffCookie);
+  await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'RENTING',note:'Kiểm thử RENTING',proofImage}),staffCookie);
+  await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'RETURNING',note:'Kiểm thử RETURNING'}),staffCookie);
+  await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'COMPLETED',inspectionResult:'MISSING_ACCESSORIES',note:'Thiếu nắp ống kính trong kiểm thử',proofImage}),staffCookie);results.push('Hoàn tất giao nhận có ảnh bằng chứng và tạo sự cố');
   const reviewProduct=await query('SELECT p.slug FROM rental_items ri JOIN products p ON p.id=ri.product_id WHERE ri.rental_id=$1 LIMIT 1',[rentalId]);
   const reviewPath=`/products/${reviewProduct.rows[0].slug}/reviews`;
   const beforeReview=await ok(reviewPath);check(beforeReview.data.count>=0,'Khách xem được đánh giá sản phẩm');
