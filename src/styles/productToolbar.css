@@ -1,24 +1,271 @@
-.catalog-toolbar{position:relative;top:auto;padding:20px 0;border:0;background:#ebe7df}.toolbar-inner{min-height:0;padding:0;display:grid;grid-template-columns:1fr;gap:14px}.filter-heading{display:flex;align-items:center;justify-content:space-between}.filter-heading>div span,.filter-heading>div small{display:block}.filter-heading span{font-weight:700}.filter-heading small{margin-top:1px;color:var(--muted);font-size:.78rem}.filter-heading>strong{padding:5px 10px;border-radius:99px;background:#fffaf2;color:var(--rust);font-size:.75rem}.brand-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.brand-filters button{min-height:46px;padding:10px 16px;border:1px solid transparent;border-radius:12px;background:#dfdce3;color:#464b60;text-align:left;font-weight:700;transition:.2s}.brand-filters button:hover{background:#d4d0d9;transform:translateY(-1px)}.brand-filters button.active{border-color:var(--rust);background:var(--rust);color:white}.brand-filters button::before{content:"○";margin-right:8px;color:var(--rust)}.brand-filters button.active::before{content:"●";color:#ffd0b5}.catalog-controls{padding-top:14px;display:grid;grid-template-columns:minmax(280px,1fr) auto;gap:14px;border-top:1px solid #d2c3af}.catalog-controls form{width:100%;display:flex}.catalog-controls input{width:100%;min-width:0}.catalog-controls label{display:flex;align-items:center;gap:6px}.rental-period{margin-bottom:22px;padding:15px 18px;display:flex;align-items:center;gap:13px;border:1px solid #cadccf;border-radius:15px;background:#edf5ef}.rental-period>span{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:var(--green);color:white;font-weight:700}.rental-period div{flex:1}.rental-period strong,.rental-period small{display:block}.rental-period small{color:var(--muted)}.rental-period a{color:var(--rust);font-weight:700;font-size:.84rem}.pagination{margin-top:38px;display:flex;align-items:center;justify-content:center;gap:7px}.pagination button{min-width:42px;height:42px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font-weight:700}.pagination button:hover:not(:disabled),.pagination button.active{border-color:var(--ink);background:var(--ink);color:white}.pagination button:disabled{opacity:.4;cursor:not-allowed}
-@media(max-width:760px){.brand-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-controls{grid-template-columns:1fr}.catalog-controls label{justify-content:space-between}.catalog-controls select{flex:1}.rental-period{align-items:flex-start;flex-wrap:wrap}.rental-period a{margin-left:47px}.pagination{flex-wrap:wrap}.pagination button:first-child,.pagination button:last-child{order:2;min-width:105px}}
-@media(max-width:420px){.filter-heading>div small{display:none}.brand-filters button{font-size:.82rem}.pagination{gap:5px}.pagination button{min-width:38px;height:38px;padding:0 10px}}
+.catalog-toolbar {
+  position: sticky;
+  top: 78px;
+  z-index: 8;
+  padding: 16px 0;
+  border-block: 1px solid var(--line);
+  background: rgba(244, 238, 228, .97);
+  backdrop-filter: blur(14px);
+}
 
-/* Thanh danh mục theo bản thiết kế mới: nền kem, nút xám và tự xuống hàng. */
-.catalog-toolbar{position:sticky;top:78px;z-index:8;padding:16px 0;border-block:1px solid var(--line);background:rgba(244,238,228,.97);backdrop-filter:blur(14px)}
-.brand-filters{display:flex;flex-wrap:wrap;gap:10px}
-.brand-filters button{flex:1 1 150px;background:#e8e5ec}
-@media(max-width:760px){.catalog-toolbar{position:relative;top:auto}.brand-filters button{flex-basis:calc(50% - 5px)}}
+.toolbar-inner {
+  min-height: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
 
-/* Dropdown danh mục thuộc trang Xem thiết bị. */
-.brand-filters>button,.catalog-filter-menu>button{min-height:46px;padding:10px 18px;border:1px solid transparent;border-radius:12px;background:#e8e5ec;color:#464b60;text-align:left;font-weight:700;transition:.2s}.brand-filters>button:hover,.catalog-filter-menu>button:hover{background:#ddd9e3;transform:translateY(-1px)}.brand-filters>button.active,.catalog-filter-menu>button.active{border-color:var(--rust);background:var(--rust);color:#fff}.catalog-filter-menu{position:relative;flex:1 1 170px}.catalog-filter-menu>button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}.catalog-filter-menu>button>span{font-size:1rem;transition:transform .2s}.catalog-filter-menu>button[aria-expanded=true]>span{transform:rotate(180deg)}.catalog-filter-dropdown{position:absolute;z-index:30;top:calc(100% + 9px);left:0;width:max-content;min-width:245px;padding:7px;border:1px solid var(--line);border-radius:12px;background:var(--paper);box-shadow:0 18px 40px rgba(43,33,28,.17)}.brand-filters .catalog-filter-dropdown button{width:100%;min-height:0;padding:11px 12px;display:flex;align-items:center;justify-content:space-between;gap:16px;border:0;border-bottom:1px solid #eadfd2;border-radius:0;background:transparent;color:var(--ink);text-align:left;font-size:.86rem;font-weight:700;transform:none}.brand-filters .catalog-filter-dropdown button:last-child{border-bottom:0}.brand-filters .catalog-filter-dropdown button:hover,.brand-filters .catalog-filter-dropdown button.selected{border-radius:8px;background:#f0e4d7;color:var(--rust)}.catalog-filter-dropdown small{color:var(--muted);font-size:.7rem;font-weight:400}.brand-filters>button::before,.catalog-filter-menu>button::before{content:none}.brand-filters>button,.catalog-filter-menu{flex:1 1 150px}@media(max-width:760px){.brand-filters>button,.catalog-filter-menu{flex-basis:calc(50% - 5px)}.catalog-filter-dropdown{left:auto;right:0;min-width:min(260px,calc(100vw - 28px))}}
-.catalog-filter-dropdown button::before{content:none!important}
-.catalog-filter-menu>button>span{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;transform:none!important}
-.catalog-filter-menu>button>span>span{display:inline-block;transition:transform .2s}
-.catalog-filter-menu>button[aria-expanded=true]>span>span{transform:rotate(180deg)}
-.catalog-filter-dropdown button>span{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.filter-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-/* Căn thống nhất nhãn danh mục: chấm trái, chữ giữa, mũi tên phải. */
-.brand-filters>button,.catalog-filter-menu>button{font-size:.9rem;line-height:1.2}
-.brand-filters>button>span,.catalog-filter-menu>button>span{width:100%;display:grid;grid-template-columns:7px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:inherit;text-align:left}
-.brand-filters>button>span::before,.catalog-filter-menu>button>span::before{content:"";width:6px;height:6px;justify-self:start;border:1.5px solid var(--rust);border-radius:50%;background:transparent}
-.brand-filters>button.active>span::before,.catalog-filter-menu>button.active>span::before{border-color:#ffd0b5;background:#ffd0b5}
-.catalog-filter-menu>button>span>span{width:auto;justify-self:end;margin:0;font-size:.8rem;line-height:1;transition:transform .2s}
+.filter-heading > div span,
+.filter-heading > div small { display: block; }
+.filter-heading span { font-weight: 700; }
+.filter-heading small { margin-top: 1px; color: var(--muted); font-size: .78rem; }
+.filter-heading > strong {
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: #fffaf2;
+  color: var(--rust);
+  font-size: .75rem;
+}
+
+.brand-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.brand-filters > button,
+.catalog-filter-menu {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.catalog-filter-menu { position: relative; }
+
+.brand-filters > button,
+.catalog-filter-menu > button {
+  position: relative;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: #e9dfd2;
+  color: var(--ink);
+  font-size: .9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  transition: background .2s, transform .2s;
+}
+
+.brand-filters > button:hover,
+.catalog-filter-menu > button:hover {
+  background: #e0d0bf;
+  transform: translateY(-1px);
+}
+
+.brand-filters > button.active,
+.catalog-filter-menu > button.active {
+  border-color: var(--rust);
+  background: var(--rust);
+  color: #fff;
+}
+
+.brand-filters .filter-button-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.filter-button-label { font-size: inherit; line-height: inherit; }
+
+.filter-button-content > i {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd0b5;
+  transform: translateY(-50%);
+  visibility: hidden;
+}
+
+.brand-filters > button.active .filter-button-content > i,
+.catalog-filter-menu > button.active .filter-button-content > i { visibility: visible; }
+
+.filter-button-arrow {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  display: block;
+  font-size: 0;
+  transform: translateY(-50%);
+}
+
+.filter-button-arrow::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.catalog-filter-menu > button[aria-expanded=true] .filter-button-arrow::after {
+  transform: rotate(225deg);
+}
+
+.filter-button-spacer { display: none; }
+
+.catalog-filter-dropdown {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 9px);
+  left: 0;
+  width: max-content;
+  min-width: 245px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  box-shadow: 0 18px 40px rgba(43, 33, 28, .17);
+}
+
+.brand-filters .catalog-filter-dropdown button {
+  width: 100%;
+  min-height: 0;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 0;
+  border-bottom: 1px solid #eadfd2;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: .86rem;
+  font-weight: 700;
+  transform: none;
+}
+
+.brand-filters .catalog-filter-dropdown button:last-child { border-bottom: 0; }
+.brand-filters .catalog-filter-dropdown button:hover,
+.brand-filters .catalog-filter-dropdown button.selected {
+  border-radius: 8px;
+  background: #f0e4d7;
+  color: var(--rust);
+}
+
+.catalog-filter-dropdown button > span {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.catalog-filter-dropdown small { color: var(--muted); font-size: .7rem; font-weight: 400; }
+
+.catalog-controls {
+  padding-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) auto;
+  gap: 14px;
+  border-top: 1px solid #d2c3af;
+}
+
+.catalog-controls form { width: 100%; display: flex; }
+.catalog-controls input { width: 100%; min-width: 0; }
+.catalog-controls label { display: flex; align-items: center; gap: 6px; }
+
+.rental-period {
+  margin-bottom: 22px;
+  padding: 15px 18px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid #cadccf;
+  border-radius: 15px;
+  background: #edf5ef;
+}
+
+.rental-period > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+  font-weight: 700;
+}
+
+.rental-period div { flex: 1; }
+.rental-period strong,
+.rental-period small { display: block; }
+.rental-period small { color: var(--muted); }
+.rental-period a { color: var(--rust); font-weight: 700; font-size: .84rem; }
+
+.pagination {
+  margin-top: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.pagination button {
+  min-width: 42px;
+  height: 42px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.pagination button:hover:not(:disabled),
+.pagination button.active { border-color: var(--ink); background: var(--ink); color: white; }
+.pagination button:disabled { opacity: .4; cursor: not-allowed; }
+
+@media (max-width: 760px) {
+  .catalog-toolbar { position: relative; top: auto; }
+  .brand-filters > button,
+  .catalog-filter-menu { flex-basis: calc(50% - 5px); }
+  .catalog-filter-dropdown { left: auto; right: 0; min-width: min(260px, calc(100vw - 28px)); }
+  .catalog-controls { grid-template-columns: 1fr; }
+  .catalog-controls label { justify-content: space-between; }
+  .catalog-controls select { flex: 1; }
+  .rental-period { align-items: flex-start; flex-wrap: wrap; }
+  .rental-period a { margin-left: 47px; }
+  .pagination { flex-wrap: wrap; }
+  .pagination button:first-child,
+  .pagination button:last-child { order: 2; min-width: 105px; }
+}
+
+@media (max-width: 420px) {
+  .filter-heading > div small { display: none; }
+  .brand-filters > button,
+  .catalog-filter-menu > button { font-size: .82rem; }
+  .pagination { gap: 5px; }
+  .pagination button { min-width: 38px; height: 38px; padding: 0 10px; }
+}

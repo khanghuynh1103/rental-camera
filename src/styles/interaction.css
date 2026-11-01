@@ -1,0 +1,95 @@
+/* Keep links in the site's warm palette, including Ant Design links. */
+body a:is(:hover, :focus-visible) {
+  color: var(--rust);
+}
+
+body .light > a:is(:hover, :focus-visible),
+body .featured-footer a:is(:hover, :focus-visible) {
+  color: #efa879;
+}
+
+body a.button.outline {
+  border-color: var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Light buttons become brown. */
+body a.button.outline:is(:hover, :focus-visible),
+body a.nav-cta:is(:hover, :focus-visible),
+body .ant-btn.ant-btn-default:not(:disabled):is(:hover, :focus-visible),
+body .booking-actions > a:first-child:is(:hover, :focus-visible),
+body .booking-actions .ant-btn.secondary:not(:disabled):is(:hover, :focus-visible),
+body .booking-success a:first-child:is(:hover, :focus-visible),
+body .receipt > footer a:is(:hover, :focus-visible),
+body .receipt > footer button:not(:disabled):is(:hover, :focus-visible) {
+  border-color: var(--rust);
+  background: var(--rust);
+  color: #fff;
+}
+
+/* The search action follows the same brown-to-light behavior as other primary buttons. */
+body .search-box .ant-btn.button.primary {
+  border-color: var(--rust);
+  background: var(--rust);
+  color: #fff;
+}
+
+body .search-box .ant-btn.button.primary:not(:disabled):is(:hover, :focus-visible) {
+  border-color: var(--rust);
+  background: var(--paper);
+  color: var(--rust);
+}
+
+/* Brown calls to action become light. */
+body a.button.primary:is(:hover, :focus-visible),
+body .ant-btn.ant-btn-primary:not(:disabled):is(:hover, :focus-visible),
+body .ant-btn.button.primary:not(:disabled):is(:hover, :focus-visible),
+body .auth-panel form > .ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .profile form .ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .catalog-controls form .ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .empty-products .ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .rental-actions > .ant-btn:first-child:not(:disabled):is(:hover, :focus-visible),
+body .booking-actions :is(a, .ant-btn):is(:hover, :focus-visible),
+body .booking-success a:is(:hover, :focus-visible),
+body .gateway-button.ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .admin-primary.ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .receipt > footer .primary:is(:hover, :focus-visible),
+body .brand-filters > .ant-btn.active:is(:hover, :focus-visible),
+body .catalog-filter-menu > .ant-btn.active:is(:hover, :focus-visible) {
+  border-color: var(--rust);
+  background: var(--paper);
+  color: var(--rust);
+}
+
+/* Dark brown buttons become light while keeping their darker text. */
+body a.button.dark:is(:hover, :focus-visible),
+body a.detail-button:is(:hover, :focus-visible),
+body a.table-link:is(:hover, :focus-visible),
+body .customer-list article > .ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .rental-filters .ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .analytics-filter form .ant-btn:not(:disabled):is(:hover, :focus-visible),
+body .dashboard aside .ant-btn.active:is(:hover, :focus-visible),
+body .admin-tabs .ant-btn.active:is(:hover, :focus-visible),
+body .analytics-filter .ant-btn.active:is(:hover, :focus-visible),
+body .pagination .ant-btn.active:is(:hover, :focus-visible) {
+  border-color: var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body .product-info > div > a:is(:hover, :focus-visible) {
+  color: #fff;
+}
+
+body .method-grid button:not(:disabled):is(:hover, :focus-visible),
+body .payment-option:not(:disabled):is(:hover, :focus-visible) {
+  border-color: var(--rust);
+  background: var(--rust);
+  color: #fff;
+}
+
+body .method-grid button:is(:hover, :focus-visible) span,
+body .payment-option:is(:hover, :focus-visible) span small {
+  color: #fff;
+}
