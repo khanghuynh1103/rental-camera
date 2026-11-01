@@ -22,7 +22,7 @@ function ProductCard({ product, favorite, onFavorite }) {
     <div className="catalog-media">
       <img className="front" src={product.images[0]} alt={`${product.name} chính diện`} />
       <img className="alternate" src={product.images[1]} alt={`${product.name} góc nghiêng`} />
-      <span className={product.stock<=2?'status low':'status'}>{product.status}</span>
+      <div className={`status availability-badge ${product.availableStock<=2?'low':''} ${product.availableStock===0?'unavailable':''}`}>{product.availableStock>0?<><span>Còn {product.availableStock} sản phẩm</span><strong>Có thể thuê</strong></>:<strong>Tạm hết thiết bị</strong>}</div>
       <UiButton className={favorite?'favorite active':'favorite'} onClick={()=>onFavorite(product.id)} aria-label={`${favorite?'Bỏ':'Thêm'} ${product.name} ${favorite?'khỏi':'vào'} yêu thích`}>{favorite?'♥':'♡'}</UiButton>
     </div>
     <div className="catalog-body"><small>{product.brandLabel} · {product.format}</small><h2>{product.name}</h2><p>{product.spec}</p><div><strong>{money(product.price)} <small>/ ngày</small></strong><Link className="detail-button" to={`/products/${product.id}`}>Xem máy →</Link></div></div>

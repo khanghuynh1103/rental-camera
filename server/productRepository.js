@@ -40,7 +40,7 @@ const productSelect=`
 function mapProduct(row){
   const detail=categoryContent[row.category]||categoryContent.accessory;
   const stock=Number(row.stock),available=Number(row.available_stock);
-  const status=available>2?'Có thể thuê':available>0?`Còn ${available} sản phẩm`:'Tạm hết thiết bị';
+  const status=available>0?'Có thể thuê':'Tạm hết thiết bị';
   const brandLabel=row.brand;
   return {
     id:row.slug,
