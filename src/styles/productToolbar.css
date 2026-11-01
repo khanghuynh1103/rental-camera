@@ -15,3 +15,10 @@
 .catalog-filter-menu>button>span>span{display:inline-block;transition:transform .2s}
 .catalog-filter-menu>button[aria-expanded=true]>span>span{transform:rotate(180deg)}
 .catalog-filter-dropdown button>span{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px}
+
+/* Căn thống nhất nhãn danh mục: chấm trái, chữ giữa, mũi tên phải. */
+.brand-filters>button,.catalog-filter-menu>button{font-size:.9rem;line-height:1.2}
+.brand-filters>button>span,.catalog-filter-menu>button>span{width:100%;display:grid;grid-template-columns:7px minmax(0,1fr) auto;align-items:center;gap:10px;font-size:inherit;text-align:left}
+.brand-filters>button>span::before,.catalog-filter-menu>button>span::before{content:"";width:6px;height:6px;justify-self:start;border:1.5px solid var(--rust);border-radius:50%;background:transparent}
+.brand-filters>button.active>span::before,.catalog-filter-menu>button.active>span::before{border-color:#ffd0b5;background:#ffd0b5}
+.catalog-filter-menu>button>span>span{width:auto;justify-self:end;margin:0;font-size:.8rem;line-height:1;transition:transform .2s}
