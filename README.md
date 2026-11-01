@@ -185,6 +185,14 @@ Kiểm thử workflow tạo và thay đổi dữ liệu. Chỉ chạy trên data
 - Thanh toán hiện chỉ là mô phỏng. Muốn thu tiền thật cần tích hợp cổng thanh toán phía server, xác minh callback/webhook và có quy trình bảo mật riêng.
 - `npm start` luôn build lại frontend trước khi khởi động server. Express phục vụ thư mục `dist` và fallback về `index.html` cho client-side routing.
 
+## Đưa bản demo lên Internet bằng Vercel
+
+Vercel build giao diện Vite vào `dist/`, phục vụ ảnh trong `img/` và chuyển request `/api/*` đến Express Function qua `vercel.json`. Vì Vercel không cung cấp PostgreSQL trực tiếp, cần tạo database ở một nhà cung cấp như Neon rồi đặt `DATABASE_URL` trong biến môi trường của Vercel. Chọn khu vực Function gần khu vực database để giảm độ trễ.
+
+Trước lần triển khai đầu, đặt `DATABASE_URL`, `DEMO_ADMIN_PASSWORD` và `DEMO_DELIVERY_PASSWORD` trong môi trường dùng để khởi tạo database rồi chạy `node server/bootstrap-hosted.js` **một lần**. Hai mật khẩu demo phải khác nhau, mỗi mật khẩu ít nhất 12 ký tự; không ghi chúng vào GitHub. Script tạo schema, dữ liệu sản phẩm và hai tài khoản demo khi database còn trống. Không chạy `npm run seed:roles` trên database công khai vì lệnh đó dùng mật khẩu mẫu cố định.
+
+Import repository `khanghuynh1103/rental-camera` vào Vercel, chọn root là thư mục gốc, thêm `DATABASE_URL` cho Production và triển khai. Sau đó kiểm tra trang chủ, `/api/products`, ảnh sản phẩm, đăng nhập và tạo đơn trước khi gửi URL `*.vercel.app` cho người xem. Giới hạn lưu trữ và thời gian hoạt động của PostgreSQL phụ thuộc gói dịch vụ database đã chọn.
+
 ## Hạn chế hiện tại
 
 - Chưa có bộ test unit/frontend tự động; hiện chỉ có kiểm thử workflow backend.

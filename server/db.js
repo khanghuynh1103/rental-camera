@@ -8,7 +8,8 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  max: process.env.VERCEL ? 2 : 10
 });
 
 export function query(text, values = []) {

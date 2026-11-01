@@ -35,13 +35,26 @@ router.get('/delivery/tasks/:id',...staffOnly,async(req,res)=>{
       FROM rentals WHERE id=$1 AND delivery_method='delivery' AND assigned_delivery_staff_id=$2`,[req.params.id,req.user.id]),
     query(`SELECT ri.equipment_item_id AS "equipmentId",p.name AS "productName",e.equipment_code AS "equipmentCode",e.condition,e.status AS "equipmentStatus"
       FROM rental_items ri JOIN products p ON p.id=ri.product_id LEFT JOIN equipment_items e ON e.id=ri.equipment_item_id WHERE ri.rental_id=$1`,[req.params.id]),
-    query(`SELECT l.id,l.action,l.inspection_result AS "inspectionResult",l.note,l.proof_image AS "proofImage",l.created_at AS "createdAt",u.full_name AS "createdBy"
+    query(`SELECT l.id,l.action,l.inspection_result AS "inspectionResult",l.note,
+      CASE WHEN l.proof_image IS NULL THEN NULL ELSE '/api/delivery/logs/' || l.id || '/proof' END AS "proofImage",
+      l.created_at AS "createdAt",u.full_name AS "createdBy"
       FROM delivery_logs l LEFT JOIN users u ON u.id=l.created_by WHERE l.rental_id=$1 ORDER BY l.created_at DESC`,[req.params.id])
   ]);
   if(!rental.rowCount)return res.status(404).json({message:'Không tìm thấy công việc giao nhận.'});
   const task=rental.rows[0];
   if(!taskStatuses.includes(task.status))return res.status(409).json({message:'Đơn này không còn trong quy trình giao nhận.'});
   res.json({task:{...task,items:items.rows,logs:logs.rows,nextStatus:transitions[task.status]}});
+});
+
+router.get('/delivery/logs/:id/proof',...staffOnly,async(req,res)=>{
+  if(!/^\d+$/.test(req.params.id))return res.status(404).json({message:'Không tìm thấy ảnh bằng chứng.'});
+  const result=await query(`SELECT l.proof_image FROM delivery_logs l JOIN rentals r ON r.id=l.rental_id
+    WHERE l.id=$1 AND r.assigned_delivery_staff_id=$2`,[req.params.id,req.user.id]);
+  const data=result.rows[0]?.proof_image;
+  const match=data?.match(/^data:image\/(jpeg|png|webp);base64,(.+)$/);
+  if(!match)return res.status(404).json({message:'Không tìm thấy ảnh bằng chứng.'});
+  res.set('Cache-Control','private, no-store');
+  res.type(`image/${match[1]}`).send(Buffer.from(match[2],'base64'));
 });
 
 router.patch('/delivery/tasks/:id/status',...staffOnly,async(req,res)=>{
@@ -54,7 +67,7 @@ router.patch('/delivery/tasks/:id/status',...staffOnly,async(req,res)=>{
     const rental=found.rows[0],expected=transitions[rental.status];
     if(!expected||requested!==expected){await client.query('ROLLBACK');return res.status(409).json({message:'Không thể thực hiện bước này với trạng thái hiện tại.'})}
     if(['RENTING','COMPLETED'].includes(requested)&&!proofImage){await client.query('ROLLBACK');return res.status(422).json({message:'Vui lòng chụp hoặc chọn ảnh bằng chứng bàn giao/thu hồi.'})}
-    if(proofImage&&(!proofPattern.test(proofImage)||Buffer.byteLength(proofImage,'utf8')>7*1024*1024)){await client.query('ROLLBACK');return res.status(422).json({message:'Ảnh bằng chứng phải là JPEG, PNG hoặc WebP và không quá 5 MB.'})}
+    if(proofImage&&(!proofPattern.test(proofImage)||Buffer.byteLength(proofImage,'utf8')>4*1024*1024)){await client.query('ROLLBACK');return res.status(422).json({message:'Ảnh bằng chứng phải là JPEG, PNG hoặc WebP và không quá 3 MB.'})}
     if(requested==='COMPLETED'&&!inspections.includes(inspection)){await client.query('ROLLBACK');return res.status(422).json({message:'Vui lòng kiểm tra tình trạng thiết bị khi thu hồi.'})}
     if(requested==='COMPLETED'&&inspection!=='GOOD'&&!note){await client.query('ROLLBACK');return res.status(422).json({message:'Vui lòng mô tả tình trạng hoặc phụ kiện bị thiếu.'})}
     const equipment=await client.query('SELECT equipment_item_id FROM rental_items WHERE rental_id=$1',[rental.id]);

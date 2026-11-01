@@ -4,8 +4,15 @@ async function request(url, options = {}) {
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options
   });
-  const data = await response.json();
-  if (!response.ok) throw Object.assign(new Error(data.message), { status: response.status, errors: data.errors });
+  const body = await response.text();
+  let data;
+  try { data = body ? JSON.parse(body) : {}; } catch { data = {}; }
+  if (!response.ok) {
+    const message = data.message || (response.status === 413
+      ? 'Dữ liệu tải lên quá lớn. Vui lòng chọn ảnh nhỏ hơn 3 MB.'
+      : `Yêu cầu thất bại (${response.status}). Vui lòng thử lại.`);
+    throw Object.assign(new Error(message), { status: response.status, errors: data.errors });
+  }
   return data;
 }
 

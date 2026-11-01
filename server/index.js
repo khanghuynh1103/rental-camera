@@ -1,20 +1,13 @@
 import express from 'express';
-import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import routes from './routes.js';
+import app from './app.js';
 import { testDatabaseConnection } from './db.js';
 
-const app=express();
 const root=path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const port=Number(process.env.PORT)||3000;
-app.disable('x-powered-by');
-app.use(express.json({limit:'8mb'}));
-app.use(cookieParser());
-app.use('/api',routes);
 app.use(express.static(path.join(root,'dist')));
 app.get('/{*splat}',(_req,res)=>res.sendFile(path.join(root,'dist','index.html')));
-app.use((error,_req,res,next)=>{void next;console.error(error);res.status(error.status||500).json({message:error.status?error.message:'Máy chủ gặp lỗi. Vui lòng thử lại.'})});
 
 try {
   const database = await testDatabaseConnection();

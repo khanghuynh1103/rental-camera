@@ -117,6 +117,11 @@ try{
   const proofImage='data:image/jpeg;base64,/9j/2Q==';
   await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'DELIVERING',note:'Kiểm thử DELIVERING'}),staffCookie);
   await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'RENTING',note:'Kiểm thử RENTING',proofImage}),staffCookie);
+  const deliveryDetail=await ok(`/delivery/tasks/${rentalId}`,{},staffCookie);
+  const proofUrl=deliveryDetail.data.task.logs.find(log=>log.proofImage)?.proofImage;
+  check(Boolean(proofUrl),'Lịch sử giao nhận có URL ảnh bằng chứng');
+  const proofResponse=await fetch(`http://localhost:${port}${proofUrl}`,{headers:{Cookie:staffCookie}});
+  check(proofResponse.ok&&proofResponse.headers.get('content-type')?.includes('image/jpeg')&&(await proofResponse.arrayBuffer()).byteLength>0,'Ảnh bằng chứng tải riêng với quyền nhân viên');
   await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'RETURNING',note:'Kiểm thử RETURNING'}),staffCookie);
   await ok(`/delivery/tasks/${rentalId}/status`,json('PATCH',{status:'COMPLETED',inspectionResult:'MISSING_ACCESSORIES',note:'Thiếu nắp ống kính trong kiểm thử',proofImage}),staffCookie);results.push('Hoàn tất giao nhận có ảnh bằng chứng và tạo sự cố');
   const reviewProduct=await query('SELECT p.slug FROM rental_items ri JOIN products p ON p.id=ri.product_id WHERE ri.rental_id=$1 LIMIT 1',[rentalId]);
