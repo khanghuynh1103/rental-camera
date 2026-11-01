@@ -1,0 +1,46 @@
+{
+  "name": "tram-may-anh",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"node --watch server/index.js\" \"vite\"",
+    "build": "vite build",
+    "start": "npm run build && node server/index.js",
+    "migrate:users": "node server/migrate-users.js",
+    "migrate:products": "node server/migrate-products.js",
+    "migrate:rentals": "node server/migrate-rentals.js",
+    "migrate:rental-workflow": "node server/migrate-rental-workflow.js",
+    "migrate:delivery-workflow": "node server/migrate-delivery-workflow.js",
+    "migrate:post-rental": "node server/migrate-post-rental.js",
+    "migrate:sessions": "node server/migrate-sessions.js",
+    "migrate:reviews": "node server/migrate-reviews.js",
+    "seed:roles": "node server/seed-roles.js",
+    "check": "eslint .",
+    "test:workflow": "node server/test-workflow.js"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.4",
+    "antd": "^6.6.8",
+    "cookie-parser": "latest",
+    "dotenv": "^18.0.7",
+    "express": "latest",
+    "pg": "^8.23.1",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router-dom": "latest"
+  },
+  "devDependencies": {
+    "@eslint/js": "latest",
+    "@vitejs/plugin-react": "latest",
+    "concurrently": "latest",
+    "eslint": "latest",
+    "eslint-plugin-react-hooks": "latest",
+    "eslint-plugin-react-refresh": "latest",
+    "globals": "latest",
+    "vite": "latest"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

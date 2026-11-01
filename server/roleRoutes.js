@@ -1,0 +1,133 @@
+import { Router } from 'express';
+import { requireAuth, requireRole } from './auth.js';
+import { pool, query } from './db.js';
+
+const router=Router();
+const roles=['CUSTOMER','ADMIN','DELIVERY_STAFF'];
+const equipmentStatuses=['AVAILABLE','RESERVED','RENTING','MAINTENANCE','DAMAGED','RETIRED'];
+const equipmentConditions=['GOOD','FAIR','DAMAGED'];
+const adminOnly=[requireAuth,requireRole('ADMIN')];
+const clean=value=>String(value??'').trim();
+const slugPattern=/^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function validateProduct(body){
+  if(clean(body.name).length<2)return 'Tên sản phẩm phải có ít nhất 2 ký tự.';
+  if(!slugPattern.test(clean(body.slug)))return 'Slug chỉ gồm chữ thường, số và dấu gạch ngang.';
+  if(!Number.isInteger(Number(body.categoryId)))return 'Danh mục không hợp lệ.';
+  if(!Number.isInteger(Number(body.pricePerDay))||Number(body.pricePerDay)<0)return 'Giá thuê không hợp lệ.';
+  if(!Number.isInteger(Number(body.depositAmount))||Number(body.depositAmount)<0)return 'Tiền cọc không hợp lệ.';
+  return null;
+}
+
+async function saveImages(client,productId,images){
+  if(!Array.isArray(images))return;
+  await client.query('DELETE FROM product_images WHERE product_id=$1',[productId]);
+  for(const [position,url] of images.map(clean).filter(Boolean).entries())
+    await client.query('INSERT INTO product_images (product_id,image_url,position) VALUES ($1,$2,$3)',[productId,url,position]);
+}
+
+router.get('/admin/overview',requireAuth,requireRole('ADMIN'),async(_req,res)=>{
+  const [summary,recent]=await Promise.all([
+    query(`SELECT
+      (SELECT COUNT(*)::INT FROM users) AS users,
+      (SELECT COUNT(*)::INT FROM products WHERE active=TRUE) AS products,
+      (SELECT COUNT(*)::INT FROM equipment_items WHERE status<>'RETIRED') AS equipment,
+      (SELECT COUNT(*)::INT FROM rentals) AS rentals`),
+    query(`SELECT r.id,r.rental_code AS code,r.full_name AS "customerName",r.start_date AS "startDate",
+      r.end_date AS "endDate",r.total_amount::FLOAT AS total,r.status,r.created_at AS "createdAt",
+      p.name AS "productName"
+      FROM rentals r JOIN rental_items ri ON ri.rental_id=r.id JOIN products p ON p.id=ri.product_id
+      ORDER BY r.created_at DESC LIMIT 8`)
+  ]);
+  res.json({summary:summary.rows[0],recentRentals:recent.rows});
+});
+
+router.get('/admin/users',requireAuth,requireRole('ADMIN'),async(_req,res)=>{
+  const result=await query(`SELECT id,full_name AS "fullName",email,phone,role,created_at AS "createdAt"
+    FROM users ORDER BY created_at DESC`);
+  res.json({users:result.rows});
+});
+
+router.get('/admin/categories',...adminOnly,async(_req,res)=>{
+  const result=await query('SELECT id,name,slug FROM categories ORDER BY id');
+  res.json({categories:result.rows});
+});
+
+router.get('/admin/products',...adminOnly,async(req,res)=>{
+  const page=Math.max(1,Number.parseInt(req.query.page)||1),limit=Math.min(100,Math.max(1,Number.parseInt(req.query.limit)||10)),search=clean(req.query.q),offset=(page-1)*limit;
+  const active=req.query.active==='all'?null:req.query.active==='false'?false:true;
+  const values=[`%${search}%`,active,limit,offset];
+  const where=`WHERE ($1='' OR p.name ILIKE $1 OR p.slug ILIKE $1 OR p.brand ILIKE $1) AND ($2::BOOLEAN IS NULL OR p.active=$2)`;
+  const [items,count]=await Promise.all([
+    query(`SELECT p.id,p.slug,p.name,p.brand,p.format,p.specification,p.description,p.price_per_day AS "pricePerDay",
+      p.deposit_amount AS "depositAmount",p.featured,p.active,p.category_id AS "categoryId",c.name AS "categoryName",
+      COALESCE(ARRAY_AGG(pi.image_url ORDER BY pi.position) FILTER(WHERE pi.id IS NOT NULL),ARRAY[]::TEXT[]) AS images,
+      COUNT(DISTINCT e.id) FILTER(WHERE e.status<>'RETIRED')::INT AS stock
+      FROM products p LEFT JOIN categories c ON c.id=p.category_id LEFT JOIN product_images pi ON pi.product_id=p.id
+      LEFT JOIN equipment_items e ON e.product_id=p.id ${where} GROUP BY p.id,c.name ORDER BY p.created_at DESC LIMIT $3 OFFSET $4`,values),
+    query(`SELECT COUNT(*)::INT AS total FROM products p ${where}`,[values[0],values[1]])
+  ]);
+  const total=count.rows[0].total;
+  res.json({products:items.rows,page,total,totalPages:Math.max(1,Math.ceil(total/limit))});
+});
+
+router.post('/admin/products',...adminOnly,async(req,res)=>{
+  const validation=validateProduct(req.body);if(validation)return res.status(422).json({message:validation});
+  const client=await pool.connect();
+  try{await client.query('BEGIN');const result=await client.query(`INSERT INTO products
+    (slug,category_id,name,brand,format,specification,description,price_per_day,deposit_amount,featured,active)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,[clean(req.body.slug),Number(req.body.categoryId),clean(req.body.name),clean(req.body.brand),clean(req.body.format),clean(req.body.specification),clean(req.body.description),Number(req.body.pricePerDay),Number(req.body.depositAmount),Boolean(req.body.featured),req.body.active!==false]);
+    await saveImages(client,result.rows[0].id,req.body.images);await client.query('COMMIT');res.status(201).json({message:'Đã thêm sản phẩm.',id:result.rows[0].id});
+  }catch(error){await client.query('ROLLBACK');if(error.code==='23505')return res.status(409).json({message:'Slug sản phẩm đã tồn tại.'});throw error}finally{client.release()}
+});
+
+router.patch('/admin/products/:id',...adminOnly,async(req,res)=>{
+  const validation=validateProduct(req.body);if(validation)return res.status(422).json({message:validation});
+  const client=await pool.connect();
+  try{await client.query('BEGIN');const result=await client.query(`UPDATE products SET slug=$1,category_id=$2,name=$3,brand=$4,format=$5,specification=$6,description=$7,price_per_day=$8,deposit_amount=$9,featured=$10,active=$11 WHERE id=$12 RETURNING id`,[clean(req.body.slug),Number(req.body.categoryId),clean(req.body.name),clean(req.body.brand),clean(req.body.format),clean(req.body.specification),clean(req.body.description),Number(req.body.pricePerDay),Number(req.body.depositAmount),Boolean(req.body.featured),req.body.active!==false,req.params.id]);
+    if(!result.rowCount){await client.query('ROLLBACK');return res.status(404).json({message:'Không tìm thấy sản phẩm.'})}await saveImages(client,req.params.id,req.body.images);await client.query('COMMIT');res.json({message:'Đã cập nhật sản phẩm.'});
+  }catch(error){await client.query('ROLLBACK');if(error.code==='23505')return res.status(409).json({message:'Slug sản phẩm đã tồn tại.'});throw error}finally{client.release()}
+});
+
+router.patch('/admin/products/:id/visibility',...adminOnly,async(req,res)=>{
+  const result=await query('UPDATE products SET active=$1 WHERE id=$2 RETURNING active',[Boolean(req.body.active),req.params.id]);
+  if(!result.rowCount)return res.status(404).json({message:'Không tìm thấy sản phẩm.'});
+  res.json({message:result.rows[0].active?'Đã hiển thị sản phẩm.':'Đã ẩn sản phẩm.',active:result.rows[0].active});
+});
+
+router.get('/admin/equipment',...adminOnly,async(req,res)=>{
+  const page=Math.max(1,Number.parseInt(req.query.page)||1),limit=12,search=clean(req.query.q),status=clean(req.query.status),offset=(page-1)*limit;
+  const values=[`%${search}%`,status,limit,offset];
+  const where=`WHERE ($1='' OR e.equipment_code ILIKE $1 OR p.name ILIKE $1) AND ($2='' OR e.status=$2)`;
+  const [items,count]=await Promise.all([
+    query(`SELECT e.id,e.equipment_code AS "equipmentCode",e.condition,e.status,e.created_at AS "createdAt",p.id AS "productId",p.name AS "productName" FROM equipment_items e JOIN products p ON p.id=e.product_id ${where} ORDER BY e.created_at DESC LIMIT $3 OFFSET $4`,values),
+    query(`SELECT COUNT(*)::INT AS total FROM equipment_items e JOIN products p ON p.id=e.product_id ${where}`,[values[0],values[1]])
+  ]);const total=count.rows[0].total;res.json({equipment:items.rows,page,total,totalPages:Math.max(1,Math.ceil(total/limit))});
+});
+
+router.post('/admin/equipment',...adminOnly,async(req,res)=>{
+  const code=clean(req.body.equipmentCode).toUpperCase(),condition=clean(req.body.condition).toUpperCase();
+  if(!req.body.productId||code.length<3||!equipmentConditions.includes(condition))return res.status(422).json({message:'Thông tin thiết bị không hợp lệ.'});
+  try{const result=await query(`INSERT INTO equipment_items(product_id,equipment_code,condition,status) VALUES($1,$2,$3,'AVAILABLE') RETURNING id`,[req.body.productId,code,condition]);res.status(201).json({message:'Đã thêm thiết bị vào kho.',id:result.rows[0].id})}catch(error){if(error.code==='23505')return res.status(409).json({message:'Mã thiết bị đã tồn tại.'});throw error}
+});
+
+router.patch('/admin/equipment/:id',...adminOnly,async(req,res)=>{
+  const status=clean(req.body.status).toUpperCase(),condition=clean(req.body.condition).toUpperCase();
+  if(!equipmentStatuses.includes(status)||!equipmentConditions.includes(condition))return res.status(422).json({message:'Trạng thái hoặc tình trạng thiết bị không hợp lệ.'});
+  const active=await query(`SELECT 1 FROM rental_items ri JOIN rentals r ON r.id=ri.rental_id WHERE ri.equipment_item_id=$1 AND r.status=ANY($2::VARCHAR[]) LIMIT 1`,[req.params.id,['CONFIRMED','DELIVERING','RENTING','RETURNING']]);
+  if(active.rowCount&&['AVAILABLE','MAINTENANCE','DAMAGED','RETIRED'].includes(status))return res.status(409).json({message:'Thiết bị đang nằm trong một đơn thuê hoạt động.'});
+  const result=await query('UPDATE equipment_items SET status=$1,condition=$2 WHERE id=$3 RETURNING id',[status,condition,req.params.id]);
+  if(!result.rowCount)return res.status(404).json({message:'Không tìm thấy thiết bị.'});res.json({message:'Đã cập nhật thiết bị.'});
+});
+
+router.patch('/admin/users/:id/role',requireAuth,requireRole('ADMIN'),async(req,res)=>{
+  const role=String(req.body.role||'').toUpperCase();
+  if(!roles.includes(role))return res.status(422).json({message:'Vai trò không hợp lệ.'});
+  if(req.params.id===req.user.id&&role!=='ADMIN')return res.status(422).json({message:'Bạn không thể tự gỡ quyền quản trị của mình.'});
+  const result=await query(`UPDATE users SET role=$1 WHERE id=$2
+    RETURNING id,full_name AS "fullName",email,phone,role,created_at AS "createdAt"`,[role,req.params.id]);
+  if(!result.rowCount)return res.status(404).json({message:'Không tìm thấy tài khoản.'});
+  res.json({message:'Đã cập nhật vai trò.',user:result.rows[0]});
+});
+
+export default router;
