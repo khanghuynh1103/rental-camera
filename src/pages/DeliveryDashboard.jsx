@@ -1,28 +1,85 @@
 import { Input } from 'antd';
 import UiButton from '../components/UiButton';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import EvidenceForm from '../components/EvidenceForm';
+import EvidenceLog from '../components/EvidenceLog';
 import { api } from '../api';
+import { formatDate, statusClass } from '../labels';
 import '../styles/roleDashboard.css';
+import '../styles/workflow.css';
 
-const labels={CONFIRMED:'Cần giao',DELIVERING:'Đang giao',RENTING:'Đang cho thuê',RETURNING:'Cần thu hồi',COMPLETED:'Hoàn tất'};
-const actionLabels={DELIVERING:'Đã nhận thiết bị · Bắt đầu giao',RENTING:'Đã bàn giao cho khách',RETURNING:'Bắt đầu thu hồi',COMPLETED:'Xác nhận đã thu hồi'};
-const inspectionLabels={GOOD:'Bình thường',SCRATCHED:'Trầy xước',DAMAGED:'Hư hỏng',MISSING_ACCESSORIES:'Thiếu phụ kiện'};
-const date=value=>value?new Date(value).toLocaleDateString('vi-VN'):'—';
+const labels = { CONFIRMED: 'Cần giao', DELIVERING: 'Đang giao', RENTING: 'Khách đang thuê', RETURNING: 'Đang thu hồi' };
+const actionLabels = { DELIVERING: 'Đã nhận thiết bị · Bắt đầu giao', RENTING: 'Xác nhận đã bàn giao cho khách', RETURNING: 'Bắt đầu đi thu hồi', RETURNED: 'Xác nhận đã thu hồi & kiểm tra' };
 
-export default function DeliveryDashboard(){
-  const [tasks,setTasks]=useState([]),[status,setStatus]=useState(''),[filterDate,setFilterDate]=useState(''),[page,setPage]=useState(1),[pages,setPages]=useState(1),[selected,setSelected]=useState(null),[note,setNote]=useState(''),[inspection,setInspection]=useState('GOOD'),[proofImage,setProofImage]=useState(''),[message,setMessage]=useState(''),[loading,setLoading]=useState(true);
-  const load=async()=>{try{const result=await api.deliveryTasks({status,date:filterDate,page});setTasks(result.tasks);setPages(result.totalPages)}catch(e){setMessage(e.message)}finally{setLoading(false)}};
-  useEffect(()=>{let live=true;api.deliveryTasks({status,date:filterDate,page}).then(result=>{if(live){setTasks(result.tasks);setPages(result.totalPages)}}).catch(e=>live&&setMessage(e.message)).finally(()=>live&&setLoading(false));return()=>{live=false}},[status,filterDate,page]);
-  const open=async id=>{try{const result=await api.deliveryTask(id);setSelected(result.task);setNote('');setInspection('GOOD');setProofImage('')}catch(e){setMessage(e.message)}};
-  const advance=async()=>{try{const result=await api.updateDeliveryTask(selected.id,{status:selected.nextStatus,note,inspectionResult:selected.nextStatus==='COMPLETED'?inspection:undefined,proofImage});setMessage(result.message);setSelected(null);await load()}catch(e){setMessage(e.message)}};
-  return <><Header/><main className="role-page container"><p className="eyebrow">Nhân viên giao nhận</p><h1>Lịch giao và thu hồi thiết bị</h1><section className="delivery-summary"><article><b>{tasks.filter(x=>x.status==='CONFIRMED').length}</b><span>Cần giao</span></article><article><b>{tasks.filter(x=>x.status==='RETURNING').length}</b><span>Cần thu hồi</span></article><article><b>{tasks.filter(x=>['DELIVERING','RENTING'].includes(x.status)).length}</b><span>Đang xử lý</span></article></section>{message&&<p className="admin-message">{message}</p>}<section className="delivery-toolbar"><select value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Mọi công việc</option><option value="CONFIRMED">Cần giao</option><option value="DELIVERING">Đang giao</option><option value="RENTING">Đang cho thuê</option><option value="RETURNING">Cần thu hồi</option></select><label>Ngày thực hiện <Input type="date" value={filterDate} onChange={e=>{setFilterDate(e.target.value);setPage(1)}}/></label>{filterDate&&<UiButton onClick={()=>setFilterDate('')}>Xóa ngày lọc</UiButton>}</section>{loading?<div className="page-loader compact">Đang tải…</div>:tasks.length?<section className="delivery-list">{tasks.map(task=><article className="role-card delivery-task" key={task.id}><div className="delivery-task-top"><span className={`status rental-${task.status.toLowerCase()}`}>{labels[task.status]}</span><strong>{task.code}</strong></div><div className="delivery-task-body"><div><p className="eyebrow">Thiết bị</p><h2>{task.productName}</h2><small>{task.equipmentCode}</small></div><div><p><b>{task.customerName}</b> · {task.phone}</p><p>{task.address}</p><p>{date(task.startDate)} {task.deliveryTime&&`· ${task.deliveryTime}`} → {date(task.endDate)} {task.returnTime&&`· ${task.returnTime}`}</p></div><UiButton className="admin-primary" onClick={()=>open(task.id)}>Xử lý →</UiButton></div></article>)}</section>:<section className="role-card empty"><h2>Chưa có công việc được phân công</h2><p>Quản trị viên cần phân công đơn giao tận nơi cho tài khoản của bạn.</p></section>}<div className="admin-pagination"><UiButton disabled={page===1} onClick={()=>setPage(page-1)}>←</UiButton><span>Trang {page}/{pages}</span><UiButton disabled={page===pages} onClick={()=>setPage(page+1)}>→</UiButton></div>{selected&&<TaskDetail task={selected} note={note} setNote={setNote} inspection={inspection} setInspection={setInspection} proofImage={proofImage} setProofImage={setProofImage} setMessage={setMessage} close={()=>setSelected(null)} advance={advance}/>}</main><Footer/></>;
+export default function DeliveryDashboard() {
+  const [tasks, setTasks] = useState([]), [summary, setSummary] = useState(null), [status, setStatus] = useState(''), [filterDate, setFilterDate] = useState('');
+  const [page, setPage] = useState(1), [pages, setPages] = useState(1), [selected, setSelected] = useState(null), [message, setMessage] = useState(''), [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => api.deliveryTasks({ status, date: filterDate, page })
+    .then(result => { setTasks(result.tasks); setPages(result.totalPages); setSummary(result.summary); })
+    .catch(e => setMessage(e.message))
+    .finally(() => setLoading(false)), [status, filterDate, page]);
+  useEffect(() => { load(); }, [load]);
+
+  const open = async id => { try { setSelected((await api.deliveryTask(id)).task); } catch (e) { setMessage(e.message); } };
+  // Lỗi được ném lại để form trong modal hiển thị ngay cạnh nút thao tác.
+  const advance = async values => {
+    const result = await api.updateDeliveryTask(selected.id, { status: selected.nextStatus, ...values });
+    setMessage(result.message); setSelected(null); await load();
+  };
+
+  return <><Header /><main className="role-page container">
+    <p className="eyebrow">Nhân viên giao nhận</p><h1>Lịch giao và thu hồi thiết bị</h1>
+    <section className="delivery-summary">
+      <article><b>{summary?.deliverToday ?? 0}</b><span>Cần giao hôm nay</span></article>
+      <article><b>{summary?.collectToday ?? 0}</b><span>Cần thu hồi (đến hạn/quá hạn)</span></article>
+      <article><b>{summary?.inProgress ?? 0}</b><span>Đang trên đường</span></article>
+    </section>
+    {message && <p className="admin-message">{message}</p>}
+    <section className="delivery-toolbar">
+      <select value={status} onChange={e => { setStatus(e.target.value); setPage(1); }}>
+        <option value="">Mọi công việc</option>{Object.entries(labels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+      </select>
+      <label>Ngày thực hiện <Input type="date" value={filterDate} onChange={e => { setFilterDate(e.target.value); setPage(1); }} /></label>
+      {filterDate && <UiButton onClick={() => setFilterDate('')}>Xóa ngày lọc</UiButton>}
+    </section>
+    {loading ? <div className="page-loader compact">Đang tải…</div> : tasks.length ? <section className="delivery-list">{tasks.map(task =>
+      <article className="role-card delivery-task" key={task.id}>
+        <div className="delivery-task-top"><span className={statusClass(task.status)}>{labels[task.status]}</span>{task.isOverdue && <span className="status overdue">Quá hạn</span>}<strong>{task.code}</strong></div>
+        <div className="delivery-task-body">
+          <div><p className="eyebrow">Thiết bị</p><h2>{task.productName}</h2><small>{task.equipmentCode}</small></div>
+          <div><p><b>{task.customerName}</b> · <a href={`tel:${task.phone}`}>{task.phone}</a></p><p>{task.address}</p>
+            <p>Giao {formatDate(task.startDate)} {task.deliveryTime && `· ${task.deliveryTime}`} → Thu {formatDate(task.endDate)} {task.returnTime && `· ${task.returnTime}`}</p></div>
+          <UiButton className="admin-primary" onClick={() => open(task.id)}>Xử lý →</UiButton>
+        </div>
+      </article>)}</section>
+      : <section className="role-card empty"><h2>Chưa có công việc được phân công</h2><p>Quản trị viên cần phân công đơn giao tận nơi cho tài khoản của bạn.</p></section>}
+    <div className="admin-pagination"><UiButton disabled={page === 1} onClick={() => setPage(page - 1)}>←</UiButton><span>Trang {page}/{pages}</span><UiButton disabled={page === pages} onClick={() => setPage(page + 1)}>→</UiButton></div>
+    {selected && <TaskDetail task={selected} close={() => setSelected(null)} advance={advance} />}
+  </main><Footer /></>;
 }
 
-function TaskDetail({task,note,setNote,inspection,setInspection,proofImage,setProofImage,setMessage,close,advance}){
-  const completing=task.nextStatus==='COMPLETED';
-  const needsProof=['RENTING','COMPLETED'].includes(task.nextStatus);
-  const selectProof=event=>{const file=event.target.files?.[0];if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>3*1024*1024){setMessage('Ảnh phải là JPEG, PNG hoặc WebP và không quá 3 MB.');event.target.value='';return}const reader=new FileReader();reader.onload=()=>setProofImage(String(reader.result));reader.readAsDataURL(file)};
-  return <div className="admin-modal" onMouseDown={e=>e.target===e.currentTarget&&close()}><article className="admin-form delivery-detail"><div className="section-head"><div><p className="eyebrow">{task.code}</p><h2>{labels[task.status]}</h2></div><UiButton className="close" onClick={close}>×</UiButton></div><section className="delivery-contact"><div><small>Khách hàng</small><b>{task.customerName}</b><span>{task.phone} · {task.email}</span></div><div><small>Địa chỉ</small><b>{task.address}</b><span>Giao {date(task.startDate)} · {task.deliveryTime||'Chưa chọn giờ'}</span><span>Thu {date(task.endDate)} · {task.returnTime||'Chưa chọn giờ'}</span></div></section><section className="detail-products"><h3>Danh sách thiết bị</h3>{task.items.map(item=><div key={item.equipmentId}><span><b>{item.productName}</b><small>{item.equipmentCode}</small></span><span>{item.condition==='GOOD'?'Tình trạng tốt':'Cần chú ý'}</span></div>)}</section>{task.note&&<p className="customer-note"><b>Ghi chú của khách:</b> {task.note}</p>}{completing&&<section className="inspection-box"><h3>Kiểm tra khi thu hồi</h3><div>{Object.entries(inspectionLabels).map(([value,label])=><label className={inspection===value?'selected':''} key={value}><input type="radio" name="inspection" value={value} checked={inspection===value} onChange={e=>setInspection(e.target.value)}/>{label}</label>)}</div></section>}{needsProof&&<label className="delivery-note">Ảnh bằng chứng {completing?'thu hồi':'bàn giao'} *<input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" onChange={selectProof}/>{proofImage&&<img className="delivery-proof" src={proofImage} alt="Ảnh bằng chứng xem trước"/>}</label>}<label className="delivery-note">Ghi chú xử lý<Input.TextArea value={note} onChange={e=>setNote(e.target.value)} placeholder={completing?'Mô tả vết trầy, hư hỏng hoặc phụ kiện bị thiếu':'Ghi chú khi giao nhận (không bắt buộc)'}/></label><UiButton className="admin-primary delivery-action" onClick={advance}>{actionLabels[task.nextStatus]} →</UiButton>{task.logs.length>0&&<section className="history"><h3>Lịch sử giao nhận</h3>{task.logs.map(log=><div key={log.id}><i></i><p><b>{labels[log.action]||log.action}</b><span>{log.createdBy} · {new Date(log.createdAt).toLocaleString('vi-VN')}</span>{log.inspectionResult&&<small>{inspectionLabels[log.inspectionResult]}</small>}{log.note&&<small>{log.note}</small>}{log.proofImage&&<img className="delivery-proof" src={log.proofImage} alt={`Bằng chứng ${labels[log.action]||log.action}`}/>}</p></div>)}</section>}</article></div>;
+function TaskDetail({ task, close, advance }) {
+  const [note, setNote] = useState(''), [error, setError] = useState('');
+  const simpleAdvance = async () => { setError(''); try { await advance({ note }); } catch (e) { setError(e.message); } };
+  const needsEvidence = ['RENTING', 'RETURNED'].includes(task.nextStatus);
+  return <div className="admin-modal" onMouseDown={e => e.target === e.currentTarget && close()}><article className="admin-form delivery-detail">
+    <div className="section-head"><div><p className="eyebrow">{task.code}</p><h2>{labels[task.status]}{task.isOverdue ? ' · Quá hạn' : ''}</h2></div><UiButton className="close" onClick={close}>×</UiButton></div>
+    <section className="delivery-contact">
+      <div><small>Khách hàng</small><b>{task.customerName}</b><span><a href={`tel:${task.phone}`}>{task.phone}</a> · {task.email}</span></div>
+      <div><small>Địa chỉ</small><b>{task.address}</b><span>Giao {formatDate(task.startDate)} · {task.deliveryTime || 'Chưa chọn giờ'}</span><span>Thu {formatDate(task.endDate)} · {task.returnTime || 'Chưa chọn giờ'}</span></div>
+    </section>
+    <section className="detail-products"><h3>Danh sách thiết bị</h3>{task.items.map(item => <div key={item.id}>
+      <span><b>{item.productName}</b><small>{item.equipmentCode} · {(item.included || []).join(', ')}</small></span></div>)}</section>
+    {task.note && <p className="customer-note"><b>Ghi chú của khách:</b> {task.note}</p>}
+    {needsEvidence
+      ? <EvidenceForm key={task.nextStatus} mode={task.nextStatus === 'RETURNED' ? 'return' : 'handover'} items={task.items}
+        collectAmount={task.nextStatus === 'RENTING' ? task.collectOnHandover : 0} submitLabel={`${actionLabels[task.nextStatus]} →`} onSubmit={advance} />
+      : <><label className="delivery-note">Ghi chú xử lý<Input.TextArea value={note} onChange={e => setNote(e.target.value)} placeholder="Ghi chú (không bắt buộc)" /></label>
+        {error && <p className="role-error">{error}</p>}
+        <UiButton className="admin-primary delivery-action" onClick={simpleAdvance}>{actionLabels[task.nextStatus]} →</UiButton></>}
+    <EvidenceLog logs={task.logs} title="Lịch sử giao nhận" />
+  </article></div>;
 }

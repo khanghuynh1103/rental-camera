@@ -2,9 +2,12 @@ import { Router } from 'express';
 import { createSession, currentUser, destroySession, requireAuth, requireRole, sessionOptions } from './auth.js';
 import { hashPassword, publicUser, verifyPassword } from './database.js';
 import { query } from './db.js';
+import { loginLimiter, registerLimiter, tooMany } from './rateLimit.js';
+import { RULES, validateRentalPeriod } from './rules.js';
+import { todayVN } from './time.js';
 import productRoutes from './productRoutes.js';
 import { getProductBySlug } from './productRepository.js';
-import { completeRentalPayment, createRental } from './rentalRepository.js';
+import { createRental, expireStaleRentals, payRental } from './rentalService.js';
 import roleRoutes from './roleRoutes.js';
 import rentalAdminRoutes from './rentalAdminRoutes.js';
 import deliveryRoutes from './deliveryRoutes.js';
@@ -12,10 +15,21 @@ import postRentalRoutes from './postRentalRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
 import reviewRoutes from './reviewRoutes.js';
 import chatRoutes from './chatRoutes.js';
+import evidenceRoutes from './evidenceRoutes.js';
+import identityRoutes from './identityRoutes.js';
+import { runScheduledTasks } from './notificationDelivery.js';
 
-const router=Router();
-const emailPattern=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const validate=body=>{const errors={};if(!body.fullName?.trim()||body.fullName.trim().length<2)errors.fullName='Họ tên phải có ít nhất 2 ký tự.';if(!emailPattern.test(body.email||''))errors.email='Email không hợp lệ.';if(!body.password||body.password.length<8||!/[A-Z]/.test(body.password)||!/[0-9]/.test(body.password))errors.password='Mật khẩu cần ít nhất 8 ký tự, một chữ hoa và một chữ số.';return errors};
+const router = Router();
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const clean = value => String(value ?? '').trim();
+
+function validateRegistration(body) {
+  const errors = {};
+  if (!body.fullName?.trim() || body.fullName.trim().length < 2) errors.fullName = 'Họ tên phải có ít nhất 2 ký tự.';
+  if (!emailPattern.test(body.email || '')) errors.email = 'Email không hợp lệ.';
+  if (!body.password || body.password.length < 8 || !/[A-Z]/.test(body.password) || !/[0-9]/.test(body.password)) errors.password = 'Mật khẩu cần ít nhất 8 ký tự, một chữ hoa và một chữ số.';
+  return errors;
+}
 
 router.use(productRoutes);
 router.use(reviewRoutes);
@@ -25,17 +39,97 @@ router.use(rentalAdminRoutes);
 router.use(deliveryRoutes);
 router.use(postRentalRoutes);
 router.use(dashboardRoutes);
+router.use(evidenceRoutes);
+router.use(identityRoutes);
 
+// Vercel Cron gọi route này kèm Authorization: Bearer CRON_SECRET.
+router.get('/cron/tick', async (req, res) => {
+  if (!process.env.CRON_SECRET || req.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ message: 'Không có quyền.' });
+  res.json(await runScheduledTasks());
+});
 
-router.post('/auth/register',async(req,res)=>{const errors=validate(req.body);if(Object.keys(errors).length)return res.status(422).json({message:'Vui lòng kiểm tra lại thông tin.',errors});const email=req.body.email.trim().toLowerCase(),existing=await query('SELECT id FROM users WHERE email=$1',[email]);if(existing.rowCount)return res.status(409).json({message:'Email này đã được sử dụng.'});const password=hashPassword(req.body.password),result=await query('INSERT INTO users (full_name,email,phone,password_hash,password_salt,role) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,full_name,email,phone,role,created_at',[req.body.fullName.trim(),email,req.body.phone?.trim()||'',password.hash,password.salt,'CUSTOMER']);const user=publicUser(result.rows[0]),token=await createSession(user.id);res.cookie('session',token,sessionOptions).status(201).json({message:'Đăng ký thành công.',user})});
-router.post('/auth/login',async(req,res)=>{const email=String(req.body.email||'').trim().toLowerCase(),result=await query('SELECT * FROM users WHERE email=$1',[email]),user=result.rows[0];if(!user||!verifyPassword(String(req.body.password||''),user))return res.status(401).json({message:'Email hoặc mật khẩu không chính xác.'});const token=await createSession(user.id);res.cookie('session',token,sessionOptions).json({message:'Đăng nhập thành công.',user:publicUser(user)})});
-router.post('/auth/logout',async(req,res)=>{await destroySession(req.cookies.session);res.clearCookie('session',{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/'}).json({message:'Đã đăng xuất.'})});
-router.get('/auth/me',async(req,res)=>{const user=await currentUser(req);return user?res.json({user}):res.status(401).json({message:'Bạn chưa đăng nhập.'})});
-router.patch('/account',requireAuth,async(req,res)=>{const user=req.user;if(!req.body.fullName?.trim()||req.body.fullName.trim().length<2)return res.status(422).json({message:'Họ tên phải có ít nhất 2 ký tự.'});const result=await query('UPDATE users SET full_name=$1,phone=$2 WHERE id=$3 RETURNING id,full_name,email,phone,role,created_at',[req.body.fullName.trim(),String(req.body.phone||'').trim(),user.id]);res.json({message:'Đã cập nhật thông tin.',user:publicUser(result.rows[0])})});
-router.post('/rentals',requireAuth,requireRole('CUSTOMER'),async(req,res)=>{const user=req.user;const product=await getProductBySlug(req.body.productId);if(!product)return res.status(404).json({message:'Không tìm thấy sản phẩm.'});const start=new Date(req.body.startDate),end=new Date(req.body.endDate),today=new Date();today.setHours(0,0,0,0);if(Number.isNaN(start.getTime())||Number.isNaN(end.getTime())||start<today||end<start)return res.status(422).json({message:'Khoảng thời gian thuê không hợp lệ.'});if(!req.body.fullName?.trim()||!req.body.phone?.trim()||!emailPattern.test(req.body.email||''))return res.status(422).json({message:'Vui lòng điền đầy đủ thông tin liên hệ.'});if(req.body.deliveryMethod==='delivery'&&!req.body.address?.trim())return res.status(422).json({message:'Vui lòng nhập địa chỉ giao và thu hồi thiết bị.'});const rental=await createRental({user,product,startDate:req.body.startDate,endDate:req.body.endDate,fullName:req.body.fullName.trim(),phone:req.body.phone.trim(),email:req.body.email.trim(),deliveryMethod:req.body.deliveryMethod==='store'?'store':'delivery',address:String(req.body.address||'').trim(),deliveryTime:String(req.body.deliveryTime||'').trim(),returnTime:String(req.body.returnTime||'').trim(),note:String(req.body.note||'').trim(),paymentMethod:req.body.paymentMethod==='handover'?'handover':'online'});res.status(201).json({message:'Đã gửi yêu cầu thuê thành công.',rental})});
+router.post('/auth/register', async (req, res) => {
+  const wait = registerLimiter.hit(`register:${req.ip}`);
+  if (wait) return tooMany(res, registerLimiter, wait);
+  const errors = validateRegistration(req.body);
+  if (Object.keys(errors).length) return res.status(422).json({ message: 'Vui lòng kiểm tra lại thông tin.', errors });
+  const email = req.body.email.trim().toLowerCase();
+  const existing = await query('SELECT id FROM users WHERE email=$1', [email]);
+  if (existing.rowCount) return res.status(409).json({ message: 'Email này đã được sử dụng.' });
+  const password = hashPassword(req.body.password);
+  const result = await query(
+    'INSERT INTO users (full_name,email,phone,password_hash,password_salt,role) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,full_name,email,phone,role,created_at',
+    [req.body.fullName.trim(), email, req.body.phone?.trim() || '', password.hash, password.salt, 'CUSTOMER']
+  );
+  const user = publicUser(result.rows[0]);
+  const token = await createSession(user.id);
+  res.cookie('session', token, sessionOptions).status(201).json({ message: 'Đăng ký thành công.', user });
+});
 
-router.post('/rentals/:id/payment',requireAuth,requireRole('CUSTOMER'),async(req,res)=>{const rental=await completeRentalPayment(req.params.id,req.user.id);res.json({message:'Thanh toán mô phỏng thành công.',rental})});
+router.post('/auth/login', async (req, res) => {
+  const email = clean(req.body.email).toLowerCase();
+  const key = `login:${req.ip}:${email}`;
+  const wait = loginLimiter.check(key);
+  if (wait) return tooMany(res, loginLimiter, wait);
+  const result = await query('SELECT * FROM users WHERE email=$1', [email]);
+  const user = result.rows[0];
+  if (!user || !verifyPassword(String(req.body.password || ''), user)) {
+    loginLimiter.hit(key);
+    return res.status(401).json({ message: 'Email hoặc mật khẩu không chính xác.' });
+  }
+  loginLimiter.reset(key);
+  const token = await createSession(user.id);
+  res.cookie('session', token, sessionOptions).json({ message: 'Đăng nhập thành công.', user: publicUser(user) });
+});
+
+router.post('/auth/logout', async (req, res) => {
+  await destroySession(req.cookies.session);
+  res.clearCookie('session', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' }).json({ message: 'Đã đăng xuất.' });
+});
+
+router.get('/auth/me', async (req, res) => {
+  const user = await currentUser(req);
+  return user ? res.json({ user }) : res.status(401).json({ message: 'Bạn chưa đăng nhập.' });
+});
+
+router.patch('/account', requireAuth, async (req, res) => {
+  if (!req.body.fullName?.trim() || req.body.fullName.trim().length < 2) return res.status(422).json({ message: 'Họ tên phải có ít nhất 2 ký tự.' });
+  const result = await query('UPDATE users SET full_name=$1,phone=$2 WHERE id=$3 RETURNING id,full_name,email,phone,role,created_at',
+    [req.body.fullName.trim(), clean(req.body.phone), req.user.id]);
+  res.json({ message: 'Đã cập nhật thông tin.', user: publicUser(result.rows[0]) });
+});
+
+router.post('/rentals', requireAuth, requireRole('CUSTOMER'), async (req, res) => {
+  // Hỗ trợ đơn nhiều thiết bị (`productIds`) và dạng cũ một thiết bị (`productId`).
+  const slugs = [...new Set((Array.isArray(req.body.productIds) ? req.body.productIds : [req.body.productId]).map(clean).filter(Boolean))];
+  if (!slugs.length) return res.status(422).json({ message: 'Vui lòng chọn thiết bị cần thuê.' });
+  if (slugs.length > RULES.maxItemsPerRental) return res.status(422).json({ message: `Mỗi đơn thuê tối đa ${RULES.maxItemsPerRental} thiết bị.` });
+  const products = [];
+  for (const slug of slugs) {
+    const product = await getProductBySlug(slug);
+    if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm.' });
+    products.push(product);
+  }
+  const startDate = clean(req.body.startDate), endDate = clean(req.body.endDate);
+  const periodError = validateRentalPeriod(startDate, endDate, todayVN());
+  if (periodError) return res.status(422).json({ message: periodError });
+  const contact = { fullName: clean(req.body.fullName), phone: clean(req.body.phone), email: clean(req.body.email) };
+  if (!contact.fullName || !contact.phone || !emailPattern.test(contact.email)) return res.status(422).json({ message: 'Vui lòng điền đầy đủ thông tin liên hệ.' });
+  const deliveryMethod = req.body.deliveryMethod === 'store' ? 'store' : 'delivery';
+  if (deliveryMethod === 'delivery' && !clean(req.body.address)) return res.status(422).json({ message: 'Vui lòng nhập địa chỉ giao và thu hồi thiết bị.' });
+  await expireStaleRentals();
+  const rental = await createRental({
+    user: req.user, products, startDate, endDate, contact, deliveryMethod,
+    address: deliveryMethod === 'delivery' ? clean(req.body.address) : '',
+    deliveryTime: clean(req.body.deliveryTime), returnTime: clean(req.body.returnTime), note: clean(req.body.note),
+    paymentMethod: req.body.paymentMethod === 'handover' ? 'handover' : 'online'
+  });
+  res.status(201).json({ message: 'Đã gửi yêu cầu thuê thành công.', rental });
+});
+
+router.post('/rentals/:id/payment', requireAuth, requireRole('CUSTOMER'), async (req, res) => {
+  const rental = await payRental(req.params.id, req.user.id);
+  res.json({ message: 'Thanh toán mô phỏng thành công.', rental });
+});
 
 export default router;
-
-

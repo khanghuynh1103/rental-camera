@@ -19,10 +19,8 @@ if (DEMO_ADMIN_PASSWORD === DEMO_DELIVERY_PASSWORD) {
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 
 try {
-  const schema = await pool.query("SELECT to_regclass('public.products') IS NOT NULL AS exists");
-  if (!schema.rows[0].exists) {
-    execFileSync(process.execPath, ['server/migrate-schema.js'], { stdio: 'inherit' });
-  }
+  // Migration idempotent: tạo schema cho database trống hoặc nâng cấp database đã có.
+  execFileSync(process.execPath, ['server/migrate-schema.js'], { stdio: 'inherit' });
 
   const productCount = await pool.query('SELECT COUNT(*)::int AS count FROM products');
   if (productCount.rows[0].count === 0) {

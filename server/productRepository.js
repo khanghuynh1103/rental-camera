@@ -1,4 +1,7 @@
 import { query } from './db.js';
+import { UNBOOKABLE_EQUIPMENT_STATUSES } from './rules.js';
+
+const unbookable = UNBOOKABLE_EQUIPMENT_STATUSES.map(status => `'${status}'`).join(',');
 
 const categoryContent={
   camera:{label:'Máy ảnh',headline:'Linh hoạt cho cả ảnh và video.',best:['Chân dung','Sự kiện','Du lịch','Nội dung số'],included:['Thân máy','Pin và bộ sạc','Dây đeo máy','Túi bảo vệ']},
@@ -22,7 +25,9 @@ const productSelect=`
     p.price_per_day,
     p.deposit_amount,
     p.featured,
-    COALESCE(p.rental_count,0) AS rental_count,
+    p.included_items,
+    (SELECT COUNT(DISTINCT ri.rental_id) FROM rental_items ri JOIN rentals r ON r.id=ri.rental_id
+      WHERE ri.product_id=p.id AND r.status<>'CANCELLED')::INT AS rental_count,
     c.slug AS category,
     COALESCE(
       ARRAY_AGG(DISTINCT pi.image_url ORDER BY pi.image_url)
@@ -30,7 +35,7 @@ const productSelect=`
       ARRAY[]::TEXT[]
     ) AS images,
     COUNT(DISTINCT e.id)::INT AS stock,
-    COUNT(DISTINCT e.id) FILTER (WHERE e.status='AVAILABLE')::INT AS available_stock
+    COUNT(DISTINCT e.id) FILTER (WHERE e.status NOT IN (${unbookable}))::INT AS available_stock
   FROM products p
   JOIN categories c ON c.id=p.category_id
   LEFT JOIN product_images pi ON pi.product_id=p.id
@@ -40,7 +45,9 @@ const productSelect=`
 function mapProduct(row){
   const detail=categoryContent[row.category]||categoryContent.accessory;
   const stock=Number(row.stock),available=Number(row.available_stock);
-  const status=available>0?'Có thể thuê':'Tạm hết thiết bị';
+  // available_stock = số thiết bị có thể nhận đơn (không bảo trì/hư hỏng). Lịch trống theo ngày do API lịch quyết định.
+  const status=available>0?'Có thể thuê':'Tạm ngưng cho thuê';
+  const included=row.included_items?.length?row.included_items:detail.included;
   const brandLabel=row.brand;
   return {
     id:row.slug,
@@ -63,8 +70,8 @@ function mapProduct(row){
     headline:detail.headline,
     description:[row.description||`${row.name} là ${detail.label.toLowerCase()} phù hợp cho nhiều nhu cầu quay chụp thực tế.`,`Sản phẩm thuộc thương hiệu ${brandLabel}, có ${String(row.specification).toLowerCase()} và được kiểm tra trước khi bàn giao.`],
     best:detail.best,
-    included:detail.included,
-    specs:[['Thương hiệu',brandLabel],['Nhóm thiết bị',detail.label],['Phân loại',row.format],['Thông số nổi bật',row.specification],['Tình trạng',status],['Số lượng tại trạm',`${stock} thiết bị`]]
+    included,
+    specs:[['Thương hiệu',brandLabel],['Nhóm thiết bị',detail.label],['Phân loại',row.format],['Thông số nổi bật',row.specification],['Tình trạng',status],['Số lượng tại trạm',`${stock} thiết bị`],['Sẵn sàng cho thuê',`${available} thiết bị`]]
   };
 }
 

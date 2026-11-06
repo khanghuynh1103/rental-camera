@@ -1,94 +1,104 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from './auth.js';
-import { pool, query } from './db.js';
+import { query, withTransaction } from './db.js';
+import { loadRentalDetail } from './rentalDetails.js';
+import {
+  RENTAL_STATUSES, cancelRentalTx, confirmRentalTx, expireStaleRentals, handoverTx, httpError, lockRental, notify, receiveReturnTx
+} from './rentalService.js';
+import { isIsoDate, todayVN } from './time.js';
 
-const router=Router();
-const adminOnly=[requireAuth,requireRole('ADMIN')];
-const transitions={PENDING:['CONFIRMED','CANCELLED'],CONFIRMED:['DELIVERING','CANCELLED'],DELIVERING:['RENTING'],RENTING:['RETURNING'],RETURNING:['COMPLETED']};
-const clean=value=>String(value??'').trim();
+const router = Router();
+const adminOnly = [requireAuth, requireRole('ADMIN')];
+const clean = value => String(value ?? '').trim();
 
-router.get('/admin/rentals',...adminOnly,async(req,res)=>{
-  const page=Math.max(1,Number.parseInt(req.query.page)||1),limit=10,offset=(page-1)*limit;
-  const search=clean(req.query.q),status=clean(req.query.status),from=clean(req.query.from)||null,to=clean(req.query.to)||null;
-  const params=[`%${search}%`,status,from,to,limit,offset];
-  const where=`WHERE ($1='' OR r.rental_code ILIKE $1 OR r.full_name ILIKE $1 OR r.phone ILIKE $1 OR p.name ILIKE $1)
-    AND ($2='' OR r.status=$2) AND ($3::DATE IS NULL OR r.start_date >= $3::DATE) AND ($4::DATE IS NULL OR r.end_date <= $4::DATE)`;
-  const [items,count]=await Promise.all([
-    query(`SELECT r.id,r.rental_code AS code,r.full_name AS "customerName",r.phone,r.start_date AS "startDate",r.end_date AS "endDate",
-      r.total_amount::FLOAT AS total,r.status,r.delivery_method AS "deliveryMethod",r.created_at AS "createdAt",
-      STRING_AGG(DISTINCT p.name,', ') AS "productName",pay.status AS "paymentStatus"
-      FROM rentals r JOIN rental_items ri ON ri.rental_id=r.id JOIN products p ON p.id=ri.product_id
-      LEFT JOIN payments pay ON pay.rental_id=r.id ${where}
-      GROUP BY r.id,pay.status ORDER BY r.created_at DESC LIMIT $5 OFFSET $6`,params),
-    query(`SELECT COUNT(DISTINCT r.id)::INT AS total FROM rentals r JOIN rental_items ri ON ri.rental_id=r.id JOIN products p ON p.id=ri.product_id ${where}`,params.slice(0,4))
+router.get('/admin/rentals', ...adminOnly, async (req, res) => {
+  await expireStaleRentals();
+  const page = Math.max(1, Number.parseInt(req.query.page) || 1), limit = 10, offset = (page - 1) * limit;
+  const status = RENTAL_STATUSES.includes(clean(req.query.status)) ? clean(req.query.status) : '';
+  const from = isIsoDate(req.query.from) ? req.query.from : null, to = isIsoDate(req.query.to) ? req.query.to : null;
+  const params = [`%${clean(req.query.q)}%`, status, from, to, req.query.overdue === 'true', todayVN(), limit, offset];
+  const where = `WHERE ($1='%%' OR r.rental_code ILIKE $1 OR r.full_name ILIKE $1 OR r.phone ILIKE $1
+      OR EXISTS (SELECT 1 FROM rental_items x JOIN products xp ON xp.id=x.product_id WHERE x.rental_id=r.id AND xp.name ILIKE $1))
+    AND ($2='' OR r.status=$2) AND ($3::DATE IS NULL OR r.start_date >= $3::DATE) AND ($4::DATE IS NULL OR r.end_date <= $4::DATE)
+    AND (NOT $5 OR (r.status IN ('RENTING','RETURNING') AND r.end_date < $6::DATE))`;
+  const [items, count] = await Promise.all([
+    query(`SELECT r.id, r.rental_code AS code, r.full_name AS "customerName", r.phone, r.start_date AS "startDate", r.end_date AS "endDate",
+        r.total_amount::FLOAT AS total, r.status, r.delivery_method AS "deliveryMethod", r.created_at AS "createdAt",
+        (SELECT STRING_AGG(p.name, ', ' ORDER BY ri.id) FROM rental_items ri JOIN products p ON p.id=ri.product_id WHERE ri.rental_id=r.id) AS "productName",
+        pay.status AS "paymentStatus", pay.payment_method AS "paymentMethod", staff.full_name AS "staffName",
+        (r.status IN ('RENTING','RETURNING') AND r.end_date < $6::DATE) AS "isOverdue"
+      FROM rentals r LEFT JOIN payments pay ON pay.rental_id=r.id LEFT JOIN users staff ON staff.id=r.assigned_delivery_staff_id
+      ${where} ORDER BY r.created_at DESC LIMIT $7 OFFSET $8`, params),
+    query(`SELECT COUNT(*)::INT AS total FROM rentals r ${where}`, params.slice(0, 6))
   ]);
-  const total=count.rows[0].total;res.json({rentals:items.rows,page,total,totalPages:Math.max(1,Math.ceil(total/limit))});
+  const total = count.rows[0].total;
+  res.json({ rentals: items.rows, page, total, totalPages: Math.max(1, Math.ceil(total / limit)) });
 });
 
-router.get('/admin/rentals/:id',...adminOnly,async(req,res)=>{
-  const [rental,items,history]=await Promise.all([
-    query(`SELECT r.*,staff.full_name AS "assignedStaffName",pay.payment_method AS "paymentMethod",pay.status AS "paymentStatus",pay.amount::FLOAT AS "paidAmount",pay.paid_at AS "paidAt",
-      inv.invoice_code AS "invoiceCode",inv.issued_at AS "invoiceIssuedAt"
-      FROM rentals r LEFT JOIN users staff ON staff.id=r.assigned_delivery_staff_id LEFT JOIN payments pay ON pay.rental_id=r.id LEFT JOIN invoices inv ON inv.rental_id=r.id WHERE r.id=$1`,[req.params.id]),
-    query(`SELECT p.name AS "productName",p.slug,e.equipment_code AS "equipmentCode",ri.price_per_day::FLOAT AS "pricePerDay"
-      FROM rental_items ri JOIN products p ON p.id=ri.product_id LEFT JOIN equipment_items e ON e.id=ri.equipment_item_id WHERE ri.rental_id=$1`,[req.params.id]),
-    query(`SELECT h.id,h.from_status AS "fromStatus",h.to_status AS "toStatus",h.note,h.changed_at AS "changedAt",u.full_name AS "changedBy"
-      FROM rental_status_history h LEFT JOIN users u ON u.id=h.changed_by WHERE h.rental_id=$1 ORDER BY h.changed_at DESC`,[req.params.id])
-  ]);
-  if(!rental.rowCount)return res.status(404).json({message:'Không tìm thấy đơn thuê.'});
-  const row=rental.rows[0];
-  res.json({rental:{id:row.id,code:row.rental_code,customerName:row.full_name,phone:row.phone,email:row.email,startDate:row.start_date,endDate:row.end_date,deliveryMethod:row.delivery_method,address:row.delivery_address,deliveryTime:row.delivery_time,returnTime:row.return_time,note:row.note,rentalFee:Number(row.rental_fee),deposit:Number(row.deposit_amount),total:Number(row.total_amount),status:row.status,createdAt:row.created_at,assignedDeliveryStaffId:row.assigned_delivery_staff_id,assignedStaffName:row.assignedStaffName,paymentMethod:row.paymentMethod,paymentStatus:row.paymentStatus,paidAmount:row.paidAmount,paidAt:row.paidAt,invoiceCode:row.invoiceCode,invoiceIssuedAt:row.invoiceIssuedAt,items:items.rows,history:history.rows,allowedTransitions:transitions[row.status]||[]}});
+router.get('/admin/rentals/:id', ...adminOnly, async (req, res) => {
+  const rental = await loadRentalDetail(req.params.id);
+  if (!rental) return res.status(404).json({ message: 'Không tìm thấy đơn thuê.' });
+  res.json({ rental });
 });
 
-router.get('/admin/delivery-staff',...adminOnly,async(_req,res)=>{
-  const result=await query(`SELECT id,full_name AS "fullName",email,phone FROM users WHERE role='DELIVERY_STAFF' ORDER BY full_name`);
-  res.json({staff:result.rows});
+router.get('/admin/delivery-staff', ...adminOnly, async (_req, res) => {
+  const result = await query(`SELECT u.id, u.full_name AS "fullName", u.email, u.phone,
+      (SELECT COUNT(*)::INT FROM rentals r WHERE r.assigned_delivery_staff_id=u.id AND r.status IN ('CONFIRMED','DELIVERING','RETURNING')) AS "openTasks"
+    FROM users u WHERE u.role='DELIVERY_STAFF' ORDER BY u.full_name`);
+  res.json({ staff: result.rows });
 });
 
-router.patch('/admin/rentals/:id/assignment',...adminOnly,async(req,res)=>{
-  const staffId=clean(req.body.staffId)||null;
-  if(staffId){
-    const staff=await query("SELECT id FROM users WHERE id=$1 AND role='DELIVERY_STAFF'",[staffId]);
-    if(!staff.rowCount)return res.status(422).json({message:'Nhân viên giao nhận không hợp lệ.'});
+router.patch('/admin/rentals/:id/assignment', ...adminOnly, async (req, res) => {
+  const staffId = clean(req.body.staffId) || null;
+  if (staffId) {
+    const staff = await query("SELECT id FROM users WHERE id=$1 AND role='DELIVERY_STAFF'", [staffId]);
+    if (!staff.rowCount) return res.status(422).json({ message: 'Nhân viên giao nhận không hợp lệ.' });
   }
-  const result=await query(`UPDATE rentals SET assigned_delivery_staff_id=$1 WHERE id=$2 AND delivery_method='delivery'
-    RETURNING assigned_delivery_staff_id`,[staffId,req.params.id]);
-  if(!result.rowCount)return res.status(404).json({message:'Không tìm thấy đơn giao tận nơi.'});
-  res.json({message:staffId?'Đã phân công nhân viên giao nhận.':'Đã bỏ phân công giao nhận.',assignedDeliveryStaffId:result.rows[0].assigned_delivery_staff_id});
+  const result = await query(`UPDATE rentals SET assigned_delivery_staff_id=$1
+    WHERE id=$2 AND delivery_method='delivery' AND status IN ('PENDING','CONFIRMED','DELIVERING','RENTING','RETURNING')
+    RETURNING assigned_delivery_staff_id`, [staffId, req.params.id]);
+  if (!result.rowCount) return res.status(404).json({ message: 'Không tìm thấy đơn giao tận nơi đang hoạt động.' });
+  res.json({ message: staffId ? 'Đã phân công nhân viên giao nhận.' : 'Đã bỏ phân công giao nhận.', assignedDeliveryStaffId: result.rows[0].assigned_delivery_staff_id });
 });
 
-router.patch('/admin/rentals/:id/status',...adminOnly,async(req,res)=>{
-  const next=clean(req.body.status).toUpperCase(),note=clean(req.body.note);
-  const client=await pool.connect();
-  try{
-    await client.query('BEGIN');
-    const found=await client.query('SELECT * FROM rentals WHERE id=$1 FOR UPDATE',[req.params.id]);
-    if(!found.rowCount){await client.query('ROLLBACK');return res.status(404).json({message:'Không tìm thấy đơn thuê.'})}
-    const rental=found.rows[0];
-    if(!(transitions[rental.status]||[]).includes(next)){await client.query('ROLLBACK');return res.status(409).json({message:`Không thể chuyển từ ${rental.status} sang ${next}.`})}
-    if(next==='CANCELLED'&&!note){await client.query('ROLLBACK');return res.status(422).json({message:'Vui lòng nhập lý do từ chối hoặc hủy đơn.'})}
-    if(next==='DELIVERING'&&rental.delivery_method==='delivery'&&!rental.assigned_delivery_staff_id){await client.query('ROLLBACK');return res.status(409).json({message:'Hãy phân công nhân viên giao nhận trước khi bắt đầu giao.'})}
-    if(next==='CONFIRMED'){
-      const rentalItems=await client.query('SELECT * FROM rental_items WHERE rental_id=$1 FOR UPDATE',[rental.id]);
-      for(const item of rentalItems.rows){
-        const usable=await client.query(`SELECT e.id FROM equipment_items e WHERE e.id=$1 AND e.status='AVAILABLE' AND NOT EXISTS(
-          SELECT 1 FROM rental_items other JOIN rentals r ON r.id=other.rental_id WHERE other.equipment_item_id=e.id AND r.id<>$2
-          AND r.status=ANY($3::VARCHAR[]) AND r.start_date<=$5::DATE AND r.end_date>=$4::DATE)`,[item.equipment_item_id,rental.id,['PENDING','CONFIRMED','DELIVERING','RENTING','RETURNING'],rental.start_date,rental.end_date]);
-        if(!usable.rowCount){
-          const replacement=await client.query(`SELECT e.id FROM equipment_items e WHERE e.product_id=$1 AND e.status='AVAILABLE' AND NOT EXISTS(
-            SELECT 1 FROM rental_items other JOIN rentals r ON r.id=other.rental_id WHERE other.equipment_item_id=e.id AND r.id<>$2
-            AND r.status=ANY($3::VARCHAR[]) AND r.start_date<=$5::DATE AND r.end_date>=$4::DATE) ORDER BY e.equipment_code LIMIT 1 FOR UPDATE OF e SKIP LOCKED`,[item.product_id,rental.id,['PENDING','CONFIRMED','DELIVERING','RENTING','RETURNING'],rental.start_date,rental.end_date]);
-          if(!replacement.rowCount){await client.query('ROLLBACK');return res.status(409).json({message:'Không còn thiết bị phù hợp trong thời gian thuê. Hãy bổ sung kho hoặc từ chối đơn.'})}
-          await client.query('UPDATE rental_items SET equipment_item_id=$1 WHERE id=$2',[replacement.rows[0].id,item.id]);
-        }
-      }
-    }
-    if(next==='DELIVERING')await client.query(`UPDATE equipment_items SET status='RENTING' WHERE id IN(SELECT equipment_item_id FROM rental_items WHERE rental_id=$1)`,[rental.id]);
-    if(['COMPLETED','CANCELLED'].includes(next))await client.query(`UPDATE equipment_items SET status='AVAILABLE' WHERE id IN(SELECT equipment_item_id FROM rental_items WHERE rental_id=$1) AND status IN('RESERVED','RENTING')`,[rental.id]);
-    await client.query('UPDATE rentals SET status=$1 WHERE id=$2',[next,rental.id]);
-    await client.query('INSERT INTO rental_status_history(rental_id,from_status,to_status,note,changed_by) VALUES($1,$2,$3,$4,$5)',[rental.id,rental.status,next,note||null,req.user.id]);
-    await client.query('COMMIT');res.json({message:'Đã cập nhật trạng thái đơn thuê.',status:next});
-  }catch(error){await client.query('ROLLBACK');throw error}finally{client.release()}
+// Quản trị viên chỉ duyệt/hủy đơn. Các bước giao nhận đi qua endpoint riêng có ảnh và checklist.
+router.patch('/admin/rentals/:id/status', ...adminOnly, async (req, res) => {
+  const next = clean(req.body.status).toUpperCase(), note = clean(req.body.note);
+  if (!['CONFIRMED', 'CANCELLED'].includes(next)) {
+    return res.status(409).json({ message: 'Các bước giao, bàn giao và thu hồi phải thực hiện qua quy trình giao nhận có ảnh bằng chứng.' });
+  }
+  await withTransaction(async client => {
+    const rental = await lockRental(client, req.params.id);
+    if (next === 'CONFIRMED') return confirmRentalTx(client, rental, req.user.id, note);
+    if (!['PENDING', 'CONFIRMED'].includes(rental.status)) throw httpError(409, 'Chỉ có thể hủy đơn trước khi giao thiết bị.');
+    if (!note) throw httpError(422, 'Vui lòng nhập lý do từ chối hoặc hủy đơn.');
+    return cancelRentalTx(client, rental, req.user.id, `Cửa hàng hủy đơn: ${note}`);
+  });
+  res.json({ message: 'Đã cập nhật trạng thái đơn thuê.', status: next });
+});
+
+async function storeOnly(client, id) {
+  const rental = await lockRental(client, id);
+  if (rental.delivery_method !== 'store') throw httpError(409, 'Đơn giao tận nơi do nhân viên giao nhận được phân công thực hiện.');
+  return rental;
+}
+
+router.post('/admin/rentals/:id/handover', ...adminOnly, async (req, res) => {
+  await withTransaction(async client => handoverTx(client, await storeOnly(client, req.params.id), req.user.id, req.body));
+  res.json({ message: 'Đã bàn giao thiết bị tại cửa hàng.', status: 'RENTING' });
+});
+
+router.post('/admin/rentals/:id/return', ...adminOnly, async (req, res) => {
+  const result = await withTransaction(async client => receiveReturnTx(client, await storeOnly(client, req.params.id), req.user.id, req.body));
+  res.json({ message: result.status === 'COMPLETED' ? 'Đã nhận lại thiết bị và quyết toán đơn.' : 'Đã nhận lại thiết bị, đơn chuyển sang kiểm tra sự cố.', ...result });
+});
+
+router.post('/admin/rentals/:id/remind', ...adminOnly, async (req, res) => {
+  await withTransaction(async client => {
+    const rental = await lockRental(client, req.params.id);
+    await notify(client, rental.id, 'REMINDER', `Nhắc nhở đơn ${rental.rental_code}`, clean(req.body.message) || 'Cửa hàng nhắc bạn kiểm tra lịch trả thiết bị.');
+  });
+  res.json({ message: 'Đã gửi nhắc nhở cho khách hàng.' });
 });
 
 export default router;
