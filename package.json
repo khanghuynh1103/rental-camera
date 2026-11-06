@@ -13,6 +13,8 @@
     "seed:roles": "node server/seed-roles.js",
     "setup": "npm run migrate && npm run migrate:products && npm run seed:roles",
     "check": "eslint .",
+    "format": "prettier --write server api src",
+    "format:check": "prettier --check server api src",
     "test": "npm run test:unit",
     "test:unit": "node --test \"server/tests/*.test.js\"",
     "test:workflow": "node server/test-workflow.js"

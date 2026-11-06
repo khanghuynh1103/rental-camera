@@ -27,7 +27,8 @@ function validateRegistration(body) {
   const errors = {};
   if (!body.fullName?.trim() || body.fullName.trim().length < 2) errors.fullName = 'Họ tên phải có ít nhất 2 ký tự.';
   if (!emailPattern.test(body.email || '')) errors.email = 'Email không hợp lệ.';
-  if (!body.password || body.password.length < 8 || !/[A-Z]/.test(body.password) || !/[0-9]/.test(body.password)) errors.password = 'Mật khẩu cần ít nhất 8 ký tự, một chữ hoa và một chữ số.';
+  if (!body.password || body.password.length < 8 || !/[A-Z]/.test(body.password) || !/[0-9]/.test(body.password))
+    errors.password = 'Mật khẩu cần ít nhất 8 ký tự, một chữ hoa và một chữ số.';
   return errors;
 }
 
@@ -44,7 +45,8 @@ router.use(identityRoutes);
 
 // Vercel Cron gọi route này kèm Authorization: Bearer CRON_SECRET.
 router.get('/cron/tick', async (req, res) => {
-  if (!process.env.CRON_SECRET || req.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) return res.status(401).json({ message: 'Không có quyền.' });
+  if (!process.env.CRON_SECRET || req.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`)
+    return res.status(401).json({ message: 'Không có quyền.' });
   res.json(await runScheduledTasks());
 });
 
@@ -84,7 +86,14 @@ router.post('/auth/login', async (req, res) => {
 
 router.post('/auth/logout', async (req, res) => {
   await destroySession(req.cookies.session);
-  res.clearCookie('session', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' }).json({ message: 'Đã đăng xuất.' });
+  res
+    .clearCookie('session', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/'
+    })
+    .json({ message: 'Đã đăng xuất.' });
 });
 
 router.get('/auth/me', async (req, res) => {
@@ -93,35 +102,53 @@ router.get('/auth/me', async (req, res) => {
 });
 
 router.patch('/account', requireAuth, async (req, res) => {
-  if (!req.body.fullName?.trim() || req.body.fullName.trim().length < 2) return res.status(422).json({ message: 'Họ tên phải có ít nhất 2 ký tự.' });
-  const result = await query('UPDATE users SET full_name=$1,phone=$2 WHERE id=$3 RETURNING id,full_name,email,phone,role,created_at',
-    [req.body.fullName.trim(), clean(req.body.phone), req.user.id]);
+  if (!req.body.fullName?.trim() || req.body.fullName.trim().length < 2)
+    return res.status(422).json({ message: 'Họ tên phải có ít nhất 2 ký tự.' });
+  const result = await query(
+    'UPDATE users SET full_name=$1,phone=$2 WHERE id=$3 RETURNING id,full_name,email,phone,role,created_at',
+    [req.body.fullName.trim(), clean(req.body.phone), req.user.id]
+  );
   res.json({ message: 'Đã cập nhật thông tin.', user: publicUser(result.rows[0]) });
 });
 
 router.post('/rentals', requireAuth, requireRole('CUSTOMER'), async (req, res) => {
   // Hỗ trợ đơn nhiều thiết bị (`productIds`) và dạng cũ một thiết bị (`productId`).
-  const slugs = [...new Set((Array.isArray(req.body.productIds) ? req.body.productIds : [req.body.productId]).map(clean).filter(Boolean))];
+  const slugs = [
+    ...new Set(
+      (Array.isArray(req.body.productIds) ? req.body.productIds : [req.body.productId]).map(clean).filter(Boolean)
+    )
+  ];
   if (!slugs.length) return res.status(422).json({ message: 'Vui lòng chọn thiết bị cần thuê.' });
-  if (slugs.length > RULES.maxItemsPerRental) return res.status(422).json({ message: `Mỗi đơn thuê tối đa ${RULES.maxItemsPerRental} thiết bị.` });
+  if (slugs.length > RULES.maxItemsPerRental)
+    return res.status(422).json({ message: `Mỗi đơn thuê tối đa ${RULES.maxItemsPerRental} thiết bị.` });
   const products = [];
   for (const slug of slugs) {
     const product = await getProductBySlug(slug);
     if (!product) return res.status(404).json({ message: 'Không tìm thấy sản phẩm.' });
     products.push(product);
   }
-  const startDate = clean(req.body.startDate), endDate = clean(req.body.endDate);
+  const startDate = clean(req.body.startDate),
+    endDate = clean(req.body.endDate);
   const periodError = validateRentalPeriod(startDate, endDate, todayVN());
   if (periodError) return res.status(422).json({ message: periodError });
   const contact = { fullName: clean(req.body.fullName), phone: clean(req.body.phone), email: clean(req.body.email) };
-  if (!contact.fullName || !contact.phone || !emailPattern.test(contact.email)) return res.status(422).json({ message: 'Vui lòng điền đầy đủ thông tin liên hệ.' });
+  if (!contact.fullName || !contact.phone || !emailPattern.test(contact.email))
+    return res.status(422).json({ message: 'Vui lòng điền đầy đủ thông tin liên hệ.' });
   const deliveryMethod = req.body.deliveryMethod === 'store' ? 'store' : 'delivery';
-  if (deliveryMethod === 'delivery' && !clean(req.body.address)) return res.status(422).json({ message: 'Vui lòng nhập địa chỉ giao và thu hồi thiết bị.' });
+  if (deliveryMethod === 'delivery' && !clean(req.body.address))
+    return res.status(422).json({ message: 'Vui lòng nhập địa chỉ giao và thu hồi thiết bị.' });
   await expireStaleRentals();
   const rental = await createRental({
-    user: req.user, products, startDate, endDate, contact, deliveryMethod,
+    user: req.user,
+    products,
+    startDate,
+    endDate,
+    contact,
+    deliveryMethod,
     address: deliveryMethod === 'delivery' ? clean(req.body.address) : '',
-    deliveryTime: clean(req.body.deliveryTime), returnTime: clean(req.body.returnTime), note: clean(req.body.note),
+    deliveryTime: clean(req.body.deliveryTime),
+    returnTime: clean(req.body.returnTime),
+    note: clean(req.body.note),
     paymentMethod: req.body.paymentMethod === 'handover' ? 'handover' : 'online'
   });
   res.status(201).json({ message: 'Đã gửi yêu cầu thuê thành công.', rental });

@@ -3,17 +3,52 @@ import { UNBOOKABLE_EQUIPMENT_STATUSES } from './rules.js';
 
 const unbookable = UNBOOKABLE_EQUIPMENT_STATUSES.map(status => `'${status}'`).join(',');
 
-const categoryContent={
-  camera:{label:'Máy ảnh',headline:'Linh hoạt cho cả ảnh và video.',best:['Chân dung','Sự kiện','Du lịch','Nội dung số'],included:['Thân máy','Pin và bộ sạc','Dây đeo máy','Túi bảo vệ']},
-  lens:{label:'Ống kính',headline:'Góc nhìn phù hợp cho từng câu chuyện.',best:['Chân dung','Sản phẩm','Sự kiện','Ngoại cảnh'],included:['Ống kính','Nắp trước và sau','Hood che sáng','Túi bảo vệ']},
-  video:{label:'Thiết bị quay',headline:'Chuyển động mượt mà trong mọi khung hình.',best:['Vlog','Phim ngắn','Sự kiện','Du lịch'],included:['Thiết bị chính','Pin và bộ sạc','Phụ kiện lắp đặt','Túi bảo vệ']},
-  audio:{label:'Âm thanh',headline:'Thu âm rõ ràng cho nội dung chuyên nghiệp.',best:['Phỏng vấn','Podcast','Sự kiện','Video'],included:['Thiết bị chính','Cáp kết nối','Pin hoặc bộ sạc','Túi bảo vệ']},
-  light:{label:'Đèn studio',headline:'Kiểm soát ánh sáng theo ý tưởng của bạn.',best:['Studio','Sản phẩm','Phỏng vấn','Chân dung'],included:['Thân đèn','Nguồn và dây điện','Chóa tiêu chuẩn','Túi bảo vệ']},
-  flash:{label:'Đèn flash',headline:'Làm chủ ánh sáng trong từng khoảnh khắc.',best:['Sự kiện','Chân dung','Cưới hỏi','Ngoại cảnh'],included:['Đèn flash','Pin hoặc bộ sạc','Chân đế','Túi bảo vệ']},
-  accessory:{label:'Phụ kiện',headline:'Nền tảng chắc chắn cho mỗi buổi chụp.',best:['Studio','Ngoại cảnh','Sự kiện','Sản phẩm'],included:['Thiết bị chính','Đầu nối','Phụ kiện cố định','Túi vận chuyển']}
+const categoryContent = {
+  camera: {
+    label: 'Máy ảnh',
+    headline: 'Linh hoạt cho cả ảnh và video.',
+    best: ['Chân dung', 'Sự kiện', 'Du lịch', 'Nội dung số'],
+    included: ['Thân máy', 'Pin và bộ sạc', 'Dây đeo máy', 'Túi bảo vệ']
+  },
+  lens: {
+    label: 'Ống kính',
+    headline: 'Góc nhìn phù hợp cho từng câu chuyện.',
+    best: ['Chân dung', 'Sản phẩm', 'Sự kiện', 'Ngoại cảnh'],
+    included: ['Ống kính', 'Nắp trước và sau', 'Hood che sáng', 'Túi bảo vệ']
+  },
+  video: {
+    label: 'Thiết bị quay',
+    headline: 'Chuyển động mượt mà trong mọi khung hình.',
+    best: ['Vlog', 'Phim ngắn', 'Sự kiện', 'Du lịch'],
+    included: ['Thiết bị chính', 'Pin và bộ sạc', 'Phụ kiện lắp đặt', 'Túi bảo vệ']
+  },
+  audio: {
+    label: 'Âm thanh',
+    headline: 'Thu âm rõ ràng cho nội dung chuyên nghiệp.',
+    best: ['Phỏng vấn', 'Podcast', 'Sự kiện', 'Video'],
+    included: ['Thiết bị chính', 'Cáp kết nối', 'Pin hoặc bộ sạc', 'Túi bảo vệ']
+  },
+  light: {
+    label: 'Đèn studio',
+    headline: 'Kiểm soát ánh sáng theo ý tưởng của bạn.',
+    best: ['Studio', 'Sản phẩm', 'Phỏng vấn', 'Chân dung'],
+    included: ['Thân đèn', 'Nguồn và dây điện', 'Chóa tiêu chuẩn', 'Túi bảo vệ']
+  },
+  flash: {
+    label: 'Đèn flash',
+    headline: 'Làm chủ ánh sáng trong từng khoảnh khắc.',
+    best: ['Sự kiện', 'Chân dung', 'Cưới hỏi', 'Ngoại cảnh'],
+    included: ['Đèn flash', 'Pin hoặc bộ sạc', 'Chân đế', 'Túi bảo vệ']
+  },
+  accessory: {
+    label: 'Phụ kiện',
+    headline: 'Nền tảng chắc chắn cho mỗi buổi chụp.',
+    best: ['Studio', 'Ngoại cảnh', 'Sự kiện', 'Sản phẩm'],
+    included: ['Thiết bị chính', 'Đầu nối', 'Phụ kiện cố định', 'Túi vận chuyển']
+  }
 };
 
-const productSelect=`
+const productSelect = `
   SELECT
     p.id AS database_id,
     p.slug,
@@ -42,45 +77,57 @@ const productSelect=`
   LEFT JOIN equipment_items e ON e.product_id=p.id AND e.status<>'RETIRED'
 `;
 
-function mapProduct(row){
-  const detail=categoryContent[row.category]||categoryContent.accessory;
-  const stock=Number(row.stock),available=Number(row.available_stock);
+function mapProduct(row) {
+  const detail = categoryContent[row.category] || categoryContent.accessory;
+  const stock = Number(row.stock),
+    available = Number(row.available_stock);
   // available_stock = số thiết bị có thể nhận đơn (không bảo trì/hư hỏng). Lịch trống theo ngày do API lịch quyết định.
-  const status=available>0?'Có thể thuê':'Tạm ngưng cho thuê';
-  const included=row.included_items?.length?row.included_items:detail.included;
-  const brandLabel=row.brand;
+  const status = available > 0 ? 'Có thể thuê' : 'Tạm ngưng cho thuê';
+  const included = row.included_items?.length ? row.included_items : detail.included;
+  const brandLabel = row.brand;
   return {
-    id:row.slug,
-    databaseId:row.database_id,
-    brand:String(row.brand||'').toLowerCase(),
+    id: row.slug,
+    databaseId: row.database_id,
+    brand: String(row.brand || '').toLowerCase(),
     brandLabel,
-    category:row.category,
-    name:row.name,
-    format:row.format,
-    spec:row.specification,
-    price:Number(row.price_per_day),
-    deposit:Number(row.deposit_amount),
-    featured:row.featured,
-    rentalCount:Number(row.rental_count),
+    category: row.category,
+    name: row.name,
+    format: row.format,
+    spec: row.specification,
+    price: Number(row.price_per_day),
+    deposit: Number(row.deposit_amount),
+    featured: row.featured,
+    rentalCount: Number(row.rental_count),
     stock,
-    availableStock:available,
+    availableStock: available,
     status,
-    images:row.images,
-    code:`${row.category.slice(0,3).toUpperCase()}-${String(row.slug).slice(0,8).toUpperCase()}`,
-    headline:detail.headline,
-    description:[row.description||`${row.name} là ${detail.label.toLowerCase()} phù hợp cho nhiều nhu cầu quay chụp thực tế.`,`Sản phẩm thuộc thương hiệu ${brandLabel}, có ${String(row.specification).toLowerCase()} và được kiểm tra trước khi bàn giao.`],
-    best:detail.best,
+    images: row.images,
+    code: `${row.category.slice(0, 3).toUpperCase()}-${String(row.slug).slice(0, 8).toUpperCase()}`,
+    headline: detail.headline,
+    description: [
+      row.description || `${row.name} là ${detail.label.toLowerCase()} phù hợp cho nhiều nhu cầu quay chụp thực tế.`,
+      `Sản phẩm thuộc thương hiệu ${brandLabel}, có ${String(row.specification).toLowerCase()} và được kiểm tra trước khi bàn giao.`
+    ],
+    best: detail.best,
     included,
-    specs:[['Thương hiệu',brandLabel],['Nhóm thiết bị',detail.label],['Phân loại',row.format],['Thông số nổi bật',row.specification],['Tình trạng',status],['Số lượng tại trạm',`${stock} thiết bị`],['Sẵn sàng cho thuê',`${available} thiết bị`]]
+    specs: [
+      ['Thương hiệu', brandLabel],
+      ['Nhóm thiết bị', detail.label],
+      ['Phân loại', row.format],
+      ['Thông số nổi bật', row.specification],
+      ['Tình trạng', status],
+      ['Số lượng tại trạm', `${stock} thiết bị`],
+      ['Sẵn sàng cho thuê', `${available} thiết bị`]
+    ]
   };
 }
 
-export async function listProducts(){
-  const result=await query(`${productSelect} WHERE p.active=TRUE GROUP BY p.id,c.slug ORDER BY p.created_at,p.name`);
+export async function listProducts() {
+  const result = await query(`${productSelect} WHERE p.active=TRUE GROUP BY p.id,c.slug ORDER BY p.created_at,p.name`);
   return result.rows.map(mapProduct);
 }
 
-export async function getProductBySlug(slug){
-  const result=await query(`${productSelect} WHERE p.slug=$1 AND p.active=TRUE GROUP BY p.id,c.slug`,[slug]);
-  return result.rows[0]?mapProduct(result.rows[0]):null;
+export async function getProductBySlug(slug) {
+  const result = await query(`${productSelect} WHERE p.slug=$1 AND p.active=TRUE GROUP BY p.id,c.slug`, [slug]);
+  return result.rows[0] ? mapProduct(result.rows[0]) : null;
 }

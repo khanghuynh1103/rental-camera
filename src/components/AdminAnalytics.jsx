@@ -2,36 +2,304 @@ import { Input } from 'antd';
 import UiButton from './UiButton';
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { equipmentStatusLabels as inventoryLabels, formatDate, money, rentalStatusLabels as orderLabels, statusClass } from '../labels';
+import {
+  equipmentStatusLabels as inventoryLabels,
+  formatDate,
+  money,
+  rentalStatusLabels as orderLabels,
+  statusClass
+} from '../labels';
 
-export default function AdminAnalytics({onOpenRentals}){
-  const [filters,setFilters]=useState({range:'30'}),[data,setData]=useState(null),[message,setMessage]=useState('');
-  useEffect(()=>{let live=true;api.adminDashboard(filters).then(x=>live&&setData(x)).catch(e=>live&&setMessage(e.message));return()=>{live=false}},[filters]);
-  const preset=range=>setFilters({range:String(range)});
-  const custom=e=>{e.preventDefault();const values=Object.fromEntries(new FormData(e.currentTarget));setFilters({from:values.from,to:values.to})};
-  if(!data)return <div className="page-loader compact">Đang tổng hợp dữ liệu…</div>;
-  return <div className="analytics"><section className="analytics-filter"><div>{[7,30,90].map(value=><UiButton className={filters.range===String(value)?'active':''} onClick={()=>preset(value)} key={value}>{value} ngày</UiButton>)}</div><form onSubmit={custom}><Input type="date" name="from" defaultValue={data.period.from} required/><span>đến</span><Input type="date" name="to" defaultValue={data.period.to} required/><UiButton>Xem</UiButton></form></section>{message&&<p className="role-error">{message}</p>}<Operations ops={data.operations} onOpenRentals={onOpenRentals}/><section className="metric-grid"><Metric label="Doanh thu đã thu" value={money(data.revenue.total)} note={`${data.period.from} – ${data.period.to}`}/><Metric label="Doanh thu tiền thuê" value={money(data.revenue.rentalRevenue)} note="Thanh toán thành công"/><Metric label="Gia hạn và sự cố" value={money(data.revenue.extraRevenue)} note="Các khoản bổ sung"/><Metric label="Đang chờ thanh toán" value={money(data.revenue.pendingRevenue)} note="Toàn bộ khoản chưa thu"/><Metric label="Tiền cọc đang giữ" value={money(data.revenue.depositsHeld)} note={`Đã hoàn trong kỳ ${money(data.revenue.depositsRefunded)}`}/></section><section className="analytics-grid"><article className="role-card revenue-panel"><div className="panel-title"><div><p className="eyebrow">Dòng tiền</p><h2>Doanh thu theo ngày</h2></div><strong>{money(data.revenue.total)}</strong></div><RevenueChart series={data.series}/></article><article className="role-card"><p className="eyebrow">Vận hành</p><h2>Đơn thuê</h2><div className="ring-summary"><div className="ring" style={{'--value':`${data.orders.approvalRate*3.6}deg`}}><b>{data.orders.approvalRate}%</b></div><span><b>{data.orders.total}</b> đơn trong kỳ<br/>Tỷ lệ được duyệt</span></div><Distribution values={data.orders.byStatus} labels={orderLabels}/></article><article className="role-card"><p className="eyebrow">Kho thiết bị</p><h2>Tình trạng hiện tại</h2><div className="ring-summary"><div className="ring green" style={{'--value':`${data.inventory.utilizationRate*3.6}deg`}}><b>{data.inventory.utilizationRate}%</b></div><span><b>{data.inventory.total}</b> thiết bị<br/>Đang được sử dụng</span></div><Distribution values={data.inventory.byStatus} labels={inventoryLabels}/></article><article className="role-card"><p className="eyebrow">Xếp hạng</p><h2>Sản phẩm thuê nhiều</h2><div className="ranking">{data.topProducts.map((product,index)=><div key={product.slug}><i>{index+1}</i><span><b>{product.name}</b><small>{product.rentalDays} ngày thuê</small></span><strong>{product.rentalCount} đơn</strong></div>)}{!data.topProducts.length&&<p>Chưa có dữ liệu trong kỳ.</p>}</div></article><article className="role-card incident-summary"><p className="eyebrow">Kiểm soát rủi ro</p><h2>Sự cố thiết bị</h2><div><span><b>{data.incidents.pending}</b>Chờ xử lý</span><span><b>{data.incidents.resolved}</b>Đã xử lý</span><span><b>{money(data.incidents.totalFees)}</b>Phí ghi nhận</span></div><Distribution values={{SCRATCHED:data.incidents.scratched,DAMAGED:data.incidents.damaged,MISSING_ACCESSORIES:data.incidents.missingAccessories}} labels={{SCRATCHED:'Trầy xước',DAMAGED:'Hư hỏng',MISSING_ACCESSORIES:'Thiếu phụ kiện'}}/></article></section></div>;
+export default function AdminAnalytics({ onOpenRentals }) {
+  const [filters, setFilters] = useState({ range: '30' }),
+    [data, setData] = useState(null),
+    [message, setMessage] = useState('');
+  useEffect(() => {
+    let live = true;
+    api
+      .adminDashboard(filters)
+      .then(x => live && setData(x))
+      .catch(e => live && setMessage(e.message));
+    return () => {
+      live = false;
+    };
+  }, [filters]);
+  const preset = range => setFilters({ range: String(range) });
+  const custom = e => {
+    e.preventDefault();
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    setFilters({ from: values.from, to: values.to });
+  };
+  if (!data) return <div className="page-loader compact">Đang tổng hợp dữ liệu…</div>;
+  return (
+    <div className="analytics">
+      <section className="analytics-filter">
+        <div>
+          {[7, 30, 90].map(value => (
+            <UiButton
+              className={filters.range === String(value) ? 'active' : ''}
+              onClick={() => preset(value)}
+              key={value}
+            >
+              {value} ngày
+            </UiButton>
+          ))}
+        </div>
+        <form onSubmit={custom}>
+          <Input type="date" name="from" defaultValue={data.period.from} required />
+          <span>đến</span>
+          <Input type="date" name="to" defaultValue={data.period.to} required />
+          <UiButton>Xem</UiButton>
+        </form>
+      </section>
+      {message && <p className="role-error">{message}</p>}
+      <Operations ops={data.operations} onOpenRentals={onOpenRentals} />
+      <section className="metric-grid">
+        <Metric
+          label="Doanh thu đã thu"
+          value={money(data.revenue.total)}
+          note={`${data.period.from} – ${data.period.to}`}
+        />
+        <Metric label="Doanh thu tiền thuê" value={money(data.revenue.rentalRevenue)} note="Thanh toán thành công" />
+        <Metric label="Gia hạn và sự cố" value={money(data.revenue.extraRevenue)} note="Các khoản bổ sung" />
+        <Metric label="Đang chờ thanh toán" value={money(data.revenue.pendingRevenue)} note="Toàn bộ khoản chưa thu" />
+        <Metric
+          label="Tiền cọc đang giữ"
+          value={money(data.revenue.depositsHeld)}
+          note={`Đã hoàn trong kỳ ${money(data.revenue.depositsRefunded)}`}
+        />
+      </section>
+      <section className="analytics-grid">
+        <article className="role-card revenue-panel">
+          <div className="panel-title">
+            <div>
+              <p className="eyebrow">Dòng tiền</p>
+              <h2>Doanh thu theo ngày</h2>
+            </div>
+            <strong>{money(data.revenue.total)}</strong>
+          </div>
+          <RevenueChart series={data.series} />
+        </article>
+        <article className="role-card">
+          <p className="eyebrow">Vận hành</p>
+          <h2>Đơn thuê</h2>
+          <div className="ring-summary">
+            <div className="ring" style={{ '--value': `${data.orders.approvalRate * 3.6}deg` }}>
+              <b>{data.orders.approvalRate}%</b>
+            </div>
+            <span>
+              <b>{data.orders.total}</b> đơn trong kỳ
+              <br />
+              Tỷ lệ được duyệt
+            </span>
+          </div>
+          <Distribution values={data.orders.byStatus} labels={orderLabels} />
+        </article>
+        <article className="role-card">
+          <p className="eyebrow">Kho thiết bị</p>
+          <h2>Tình trạng hiện tại</h2>
+          <div className="ring-summary">
+            <div className="ring green" style={{ '--value': `${data.inventory.utilizationRate * 3.6}deg` }}>
+              <b>{data.inventory.utilizationRate}%</b>
+            </div>
+            <span>
+              <b>{data.inventory.total}</b> thiết bị
+              <br />
+              Đang được sử dụng
+            </span>
+          </div>
+          <Distribution values={data.inventory.byStatus} labels={inventoryLabels} />
+        </article>
+        <article className="role-card">
+          <p className="eyebrow">Xếp hạng</p>
+          <h2>Sản phẩm thuê nhiều</h2>
+          <div className="ranking">
+            {data.topProducts.map((product, index) => (
+              <div key={product.slug}>
+                <i>{index + 1}</i>
+                <span>
+                  <b>{product.name}</b>
+                  <small>{product.rentalDays} ngày thuê</small>
+                </span>
+                <strong>{product.rentalCount} đơn</strong>
+              </div>
+            ))}
+            {!data.topProducts.length && <p>Chưa có dữ liệu trong kỳ.</p>}
+          </div>
+        </article>
+        <article className="role-card incident-summary">
+          <p className="eyebrow">Kiểm soát rủi ro</p>
+          <h2>Sự cố thiết bị</h2>
+          <div>
+            <span>
+              <b>{data.incidents.pending}</b>Chờ xử lý
+            </span>
+            <span>
+              <b>{data.incidents.resolved}</b>Đã xử lý
+            </span>
+            <span>
+              <b>{money(data.incidents.totalFees)}</b>Phí ghi nhận
+            </span>
+          </div>
+          <Distribution
+            values={{
+              SCRATCHED: data.incidents.scratched,
+              DAMAGED: data.incidents.damaged,
+              MISSING_ACCESSORIES: data.incidents.missingAccessories
+            }}
+            labels={{ SCRATCHED: 'Trầy xước', DAMAGED: 'Hư hỏng', MISSING_ACCESSORIES: 'Thiếu phụ kiện' }}
+          />
+        </article>
+      </section>
+    </div>
+  );
 }
 
-function Operations({ops,onOpenRentals}){
-  const groups=[
-    {key:'handovers',title:'Cần giao / khách nhận',empty:'Không có đơn cần giao.',date:item=>`Nhận ${formatDate(item.startDate)}`,filter:{status:'CONFIRMED'}},
-    {key:'returns',title:'Đến hạn trả hôm nay',empty:'Không có đơn đến hạn hôm nay.',date:item=>`Trả ${formatDate(item.endDate)}`,filter:{status:'RENTING'}},
-    {key:'dueSoon',title:'Sắp đến hạn (1–3 ngày)',empty:'Không có đơn sắp đến hạn.',date:item=>`Trả ${formatDate(item.endDate)}`,filter:{status:'RENTING'}},
-    {key:'overdue',title:'Quá hạn trả',empty:'Không có đơn quá hạn.',date:item=>`Trễ ${item.lateDays} ngày${item.blocksNextBooking?' · ảnh hưởng đơn kế tiếp':''}`,filter:{overdue:true},alert:true},
-    {key:'pending',title:'Chờ duyệt',empty:'Không có đơn chờ duyệt.',date:item=>`Nhận ${formatDate(item.startDate)}`,filter:{status:'PENDING'}}
+function Operations({ ops, onOpenRentals }) {
+  const groups = [
+    {
+      key: 'handovers',
+      title: 'Cần giao / khách nhận',
+      empty: 'Không có đơn cần giao.',
+      date: item => `Nhận ${formatDate(item.startDate)}`,
+      filter: { status: 'CONFIRMED' }
+    },
+    {
+      key: 'returns',
+      title: 'Đến hạn trả hôm nay',
+      empty: 'Không có đơn đến hạn hôm nay.',
+      date: item => `Trả ${formatDate(item.endDate)}`,
+      filter: { status: 'RENTING' }
+    },
+    {
+      key: 'dueSoon',
+      title: 'Sắp đến hạn (1–3 ngày)',
+      empty: 'Không có đơn sắp đến hạn.',
+      date: item => `Trả ${formatDate(item.endDate)}`,
+      filter: { status: 'RENTING' }
+    },
+    {
+      key: 'overdue',
+      title: 'Quá hạn trả',
+      empty: 'Không có đơn quá hạn.',
+      date: item => `Trễ ${item.lateDays} ngày${item.blocksNextBooking ? ' · ảnh hưởng đơn kế tiếp' : ''}`,
+      filter: { overdue: true },
+      alert: true
+    },
+    {
+      key: 'pending',
+      title: 'Chờ duyệt',
+      empty: 'Không có đơn chờ duyệt.',
+      date: item => `Nhận ${formatDate(item.startDate)}`,
+      filter: { status: 'PENDING' }
+    }
   ];
-  const c=ops.counts;
-  return <section className="ops-panel"><div className="panel-title"><div><p className="eyebrow">Vận hành · {formatDate(ops.today)}</p><h2>Việc cần làm hôm nay</h2></div>
-    <div className="ops-badges"><span>{c.activeRentals} đơn đang thuê</span><span>{c.equipmentOut} thiết bị ngoài cửa hàng</span>{c.pendingExtensions>0&&<span className="warn">{c.pendingExtensions} yêu cầu gia hạn</span>}{c.pendingIncidents>0&&<span className="warn">{c.pendingIncidents} sự cố chờ xử lý</span>}{c.unassigned>0&&<span className="warn">{c.unassigned} đơn giao chưa phân công</span>}{c.pendingIdentity>0&&<span className="warn">{c.pendingIdentity} hồ sơ CCCD chờ duyệt</span>}{c.failedDeliveries>0&&<span className="warn">{c.failedDeliveries} email/SMS gửi lỗi</span>}</div></div>
-    <div className="ops-grid">{groups.map(group=><article key={group.key} className={`role-card ops-card ${group.alert&&ops[group.key].length?'alert':''}`}>
-      <header><b>{ops[group.key].length}</b><span>{group.title}</span>{onOpenRentals&&<button type="button" onClick={()=>onOpenRentals(group.filter)}>Xem →</button>}</header>
-      {ops[group.key].length?<ul>{ops[group.key].slice(0,5).map(item=><li key={item.id}><b>{item.code}</b><span>{item.customerName} · {item.productName}</span>
-        <small>{group.date(item)} · {item.deliveryMethod==='delivery'?(item.staffName||'Chưa phân công'):'Tại cửa hàng'}</small>
-        <span className={statusClass(item.status)}>{orderLabels[item.status]}</span></li>)}</ul>:<p>{group.empty}</p>}
-    </article>)}</div></section>;
+  const c = ops.counts;
+  return (
+    <section className="ops-panel">
+      <div className="panel-title">
+        <div>
+          <p className="eyebrow">Vận hành · {formatDate(ops.today)}</p>
+          <h2>Việc cần làm hôm nay</h2>
+        </div>
+        <div className="ops-badges">
+          <span>{c.activeRentals} đơn đang thuê</span>
+          <span>{c.equipmentOut} thiết bị ngoài cửa hàng</span>
+          {c.pendingExtensions > 0 && <span className="warn">{c.pendingExtensions} yêu cầu gia hạn</span>}
+          {c.pendingIncidents > 0 && <span className="warn">{c.pendingIncidents} sự cố chờ xử lý</span>}
+          {c.unassigned > 0 && <span className="warn">{c.unassigned} đơn giao chưa phân công</span>}
+          {c.pendingIdentity > 0 && <span className="warn">{c.pendingIdentity} hồ sơ CCCD chờ duyệt</span>}
+          {c.failedDeliveries > 0 && <span className="warn">{c.failedDeliveries} email/SMS gửi lỗi</span>}
+        </div>
+      </div>
+      <div className="ops-grid">
+        {groups.map(group => (
+          <article
+            key={group.key}
+            className={`role-card ops-card ${group.alert && ops[group.key].length ? 'alert' : ''}`}
+          >
+            <header>
+              <b>{ops[group.key].length}</b>
+              <span>{group.title}</span>
+              {onOpenRentals && (
+                <button type="button" onClick={() => onOpenRentals(group.filter)}>
+                  Xem →
+                </button>
+              )}
+            </header>
+            {ops[group.key].length ? (
+              <ul>
+                {ops[group.key].slice(0, 5).map(item => (
+                  <li key={item.id}>
+                    <b>{item.code}</b>
+                    <span>
+                      {item.customerName} · {item.productName}
+                    </span>
+                    <small>
+                      {group.date(item)} ·{' '}
+                      {item.deliveryMethod === 'delivery' ? item.staffName || 'Chưa phân công' : 'Tại cửa hàng'}
+                    </small>
+                    <span className={statusClass(item.status)}>{orderLabels[item.status]}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>{group.empty}</p>
+            )}
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
-function Metric({label,value,note}){return <article><span>{label}</span><strong>{value}</strong><small>{note}</small></article>}
-function RevenueChart({series}){const max=Math.max(...series.map(x=>Number(x.amount)),1);return <div className="revenue-chart"><div className="bars">{series.map(item=><i key={item.date} style={{height:`${Math.max(2,Number(item.amount)/max*100)}%`}} title={`${new Date(item.date).toLocaleDateString('vi-VN')}: ${money(item.amount)}`}></i>)}</div><div className="chart-axis"><span>{new Date(series[0]?.date).toLocaleDateString('vi-VN')}</span><span>{new Date(series.at(-1)?.date).toLocaleDateString('vi-VN')}</span></div></div>}
-function Distribution({values,labels}){const total=Math.max(1,Object.values(values).reduce((sum,value)=>sum+Number(value),0));return <div className="distribution">{Object.entries(labels).map(([key,label])=><div key={key}><span>{label}<b>{values[key]||0}</b></span><i><em style={{width:`${Number(values[key]||0)/total*100}%`}}></em></i></div>)}</div>}
+function Metric({ label, value, note }) {
+  return (
+    <article>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{note}</small>
+    </article>
+  );
+}
+function RevenueChart({ series }) {
+  const max = Math.max(...series.map(x => Number(x.amount)), 1);
+  return (
+    <div className="revenue-chart">
+      <div className="bars">
+        {series.map(item => (
+          <i
+            key={item.date}
+            style={{ height: `${Math.max(2, (Number(item.amount) / max) * 100)}%` }}
+            title={`${new Date(item.date).toLocaleDateString('vi-VN')}: ${money(item.amount)}`}
+          ></i>
+        ))}
+      </div>
+      <div className="chart-axis">
+        <span>{new Date(series[0]?.date).toLocaleDateString('vi-VN')}</span>
+        <span>{new Date(series.at(-1)?.date).toLocaleDateString('vi-VN')}</span>
+      </div>
+    </div>
+  );
+}
+function Distribution({ values, labels }) {
+  const total = Math.max(
+    1,
+    Object.values(values).reduce((sum, value) => sum + Number(value), 0)
+  );
+  return (
+    <div className="distribution">
+      {Object.entries(labels).map(([key, label]) => (
+        <div key={key}>
+          <span>
+            {label}
+            <b>{values[key] || 0}</b>
+          </span>
+          <i>
+            <em style={{ width: `${(Number(values[key] || 0) / total) * 100}%` }}></em>
+          </i>
+        </div>
+      ))}
+    </div>
+  );
+}

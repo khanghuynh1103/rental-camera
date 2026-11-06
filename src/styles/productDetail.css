@@ -1,3 +1,420 @@
-.detail-breadcrumb{padding:27px 0 21px;display:flex;gap:9px;color:var(--muted);font-size:.86rem}.detail-breadcrumb a:hover{color:var(--rust)}.detail-breadcrumb span{opacity:.5}.detail-hero{padding-bottom:65px}.detail-layout{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(390px,.88fr);gap:54px;align-items:start}.gallery{position:sticky;top:120px;display:grid;grid-template-columns:90px 1fr;gap:13px}.thumbs{display:flex;flex-direction:column;gap:11px}.thumbs button{aspect-ratio:1;padding:6px;overflow:hidden;border:1px solid var(--line);border-radius:13px;background:#fff}.thumbs button.active{padding:5px;border:2px solid var(--rust)}.thumbs img{width:100%;height:100%;object-fit:contain}.main-product-image{position:relative;height:580px;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);border-radius:25px;background:#fff}.main-product-image img{width:100%;height:100%;padding:35px;object-fit:contain}.main-product-image>span{position:absolute;left:17px;bottom:17px;padding:6px 11px;border-radius:99px;background:#2d211be6;color:white;font-size:.75rem}.available-detail{color:var(--green);font-size:.86rem;font-weight:700}.product-kicker{margin:17px 0 0;color:var(--rust);font-size:.76rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase}.detail-info h1{margin:9px 0 13px;font:600 clamp(2.7rem,4.4vw,4.6rem)/.95 "Fraunces",serif;letter-spacing:-.045em}.short-spec{color:var(--muted)}.rating{padding-bottom:20px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line)}.rating>span{color:var(--rust);letter-spacing:.06em}.rating small{color:var(--muted)}.detail-price{padding:22px 0;display:flex;align-items:end;justify-content:space-between}.detail-price p{margin:0;color:var(--muted)}.detail-price p:first-child strong{color:var(--ink);font:600 1.9rem "Fraunces",serif}.detail-price p:last-child{text-align:right;font-size:.82rem}.detail-price p:last-child strong{display:block;color:var(--ink);font-size:.95rem}.rental-card{padding:21px;border:1px solid var(--line);border-radius:21px;background:var(--paper);box-shadow:var(--shadow)}.rental-card h2{margin:0 0 14px;font:600 1.4rem "Fraunces",serif}.date-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.date-fields label{color:var(--muted);font-size:.76rem}.date-fields input{width:100%;margin-top:5px;padding:10px;border:1px solid var(--line);border-radius:10px;background:white}.availability{min-height:24px;margin:10px 0 7px;color:var(--green);font-size:.82rem}.availability.error{color:#9a352d}.rental-actions{display:grid;grid-template-columns:1fr auto;gap:9px}.rental-actions>button:first-child{border:0;border-radius:99px;background:var(--rust);color:white;font-weight:700}.rental-actions>button:disabled{opacity:.65}.save{width:47px;height:47px;border:1px solid var(--line);border-radius:50%;background:white;font-size:1.15rem}.save.active{background:var(--ink);color:white}.assurances{margin-top:15px;display:grid;grid-template-columns:1fr 1fr;gap:8px;color:var(--muted);font-size:.76rem}.product-description{padding:68px 0;border-top:1px solid var(--line)}.description-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:75px}.description-grid h2,.included-section h2{margin:8px 0 20px;font:600 clamp(2.2rem,4vw,3.7rem)/1.03 "Fraunces",serif;letter-spacing:-.04em}.description-grid>div>p:not(.eyebrow){color:var(--muted)}.best-for{margin-top:25px;padding:18px 0;border-block:1px solid var(--line)}.best-for>div{margin-top:8px;display:flex;flex-wrap:wrap;gap:7px}.best-for span{padding:6px 10px;border:1px solid var(--line);border-radius:99px;background:var(--paper);font-size:.78rem}.spec-table{overflow:hidden;border:1px solid var(--line);border-radius:20px;background:var(--paper)}.spec-table>div{padding:14px 18px;display:grid;grid-template-columns:.8fr 1.2fr;gap:15px;border-bottom:1px solid var(--line)}.spec-table>div:last-child{border:0}.spec-table span{color:var(--muted)}.included-section{padding:65px 0;background:var(--ink);color:#f7f0e8}.included-section .eyebrow{color:#efad7d}.included-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}.included-grid article{min-height:145px;padding:19px;border:1px solid #5b4b42;border-radius:17px}.included-grid span{color:#efad7d;font-size:.75rem}.included-grid strong{display:block;margin:15px 0 3px;font:500 1.15rem "Fraunces",serif}.included-grid p{margin:0;color:#cbbdb3;font-size:.8rem}.detail-notice{padding:28px 0;background:#e7d8c4}.detail-notice>.container{display:flex;align-items:center;justify-content:space-between}.detail-notice p{margin:2px 0;color:var(--muted)}.detail-notice a{color:var(--rust);font-weight:700}.not-found{min-height:100vh;display:grid;place-content:center;text-align:center}.not-found h1{font-family:"Fraunces",serif}.not-found a{color:var(--rust)}
-@media(max-width:950px){.detail-layout{grid-template-columns:1fr}.gallery{position:static}.description-grid{grid-template-columns:1fr}.included-grid{grid-template-columns:1fr 1fr}}@media(max-width:620px){.detail-layout{display:block}.gallery{grid-template-columns:1fr}.thumbs{order:2;flex-direction:row}.thumbs button{width:72px}.main-product-image{height:385px}.detail-info{margin-top:30px}.detail-info h1{font-size:2.7rem}.detail-price{align-items:flex-start;flex-direction:column;gap:10px}.detail-price p:last-child{text-align:left}.date-fields,.assurances{grid-template-columns:1fr}.description-grid{gap:40px}.spec-table>div{grid-template-columns:1fr;gap:3px}.included-grid{grid-template-columns:1fr}.detail-notice>.container{align-items:flex-start;flex-direction:column;gap:15px}}
-.available-detail{display:grid;justify-items:start;gap:5px}.available-detail span,.available-detail strong{display:block;padding:5px 10px;border-radius:99px;background:#eef5ef}.available-detail span{color:var(--muted);font-size:.78rem;font-weight:600}.available-detail.unavailable strong{background:#fff2e8;color:#9a4c24}
+.detail-breadcrumb {
+  padding: 27px 0 21px;
+  display: flex;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+.detail-breadcrumb a:hover {
+  color: var(--rust);
+}
+.detail-breadcrumb span {
+  opacity: 0.5;
+}
+.detail-hero {
+  padding-bottom: 65px;
+}
+.detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(390px, 0.88fr);
+  gap: 54px;
+  align-items: start;
+}
+.gallery {
+  position: sticky;
+  top: 120px;
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 13px;
+}
+.thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.thumbs button {
+  aspect-ratio: 1;
+  padding: 6px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fff;
+}
+.thumbs button.active {
+  padding: 5px;
+  border: 2px solid var(--rust);
+}
+.thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.main-product-image {
+  position: relative;
+  height: 580px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 25px;
+  background: #fff;
+}
+.main-product-image img {
+  width: 100%;
+  height: 100%;
+  padding: 35px;
+  object-fit: contain;
+}
+.main-product-image > span {
+  position: absolute;
+  left: 17px;
+  bottom: 17px;
+  padding: 6px 11px;
+  border-radius: 99px;
+  background: #2d211be6;
+  color: white;
+  font-size: 0.75rem;
+}
+.available-detail {
+  color: var(--green);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+.product-kicker {
+  margin: 17px 0 0;
+  color: var(--rust);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.detail-info h1 {
+  margin: 9px 0 13px;
+  font:
+    600 clamp(2.7rem, 4.4vw, 4.6rem)/0.95 'Fraunces',
+    serif;
+  letter-spacing: -0.045em;
+}
+.short-spec {
+  color: var(--muted);
+}
+.rating {
+  padding-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.rating > span {
+  color: var(--rust);
+  letter-spacing: 0.06em;
+}
+.rating small {
+  color: var(--muted);
+}
+.detail-price {
+  padding: 22px 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+}
+.detail-price p {
+  margin: 0;
+  color: var(--muted);
+}
+.detail-price p:first-child strong {
+  color: var(--ink);
+  font:
+    600 1.9rem 'Fraunces',
+    serif;
+}
+.detail-price p:last-child {
+  text-align: right;
+  font-size: 0.82rem;
+}
+.detail-price p:last-child strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+.rental-card {
+  padding: 21px;
+  border: 1px solid var(--line);
+  border-radius: 21px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+.rental-card h2 {
+  margin: 0 0 14px;
+  font:
+    600 1.4rem 'Fraunces',
+    serif;
+}
+.date-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.date-fields label {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.date-fields input {
+  width: 100%;
+  margin-top: 5px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+}
+.availability {
+  min-height: 24px;
+  margin: 10px 0 7px;
+  color: var(--green);
+  font-size: 0.82rem;
+}
+.availability.error {
+  color: #9a352d;
+}
+.rental-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 9px;
+}
+.rental-actions > button:first-child {
+  border: 0;
+  border-radius: 99px;
+  background: var(--rust);
+  color: white;
+  font-weight: 700;
+}
+.rental-actions > button:disabled {
+  opacity: 0.65;
+}
+.save {
+  width: 47px;
+  height: 47px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: white;
+  font-size: 1.15rem;
+}
+.save.active {
+  background: var(--ink);
+  color: white;
+}
+.assurances {
+  margin-top: 15px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+.product-description {
+  padding: 68px 0;
+  border-top: 1px solid var(--line);
+}
+.description-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 75px;
+}
+.description-grid h2,
+.included-section h2 {
+  margin: 8px 0 20px;
+  font:
+    600 clamp(2.2rem, 4vw, 3.7rem)/1.03 'Fraunces',
+    serif;
+  letter-spacing: -0.04em;
+}
+.description-grid > div > p:not(.eyebrow) {
+  color: var(--muted);
+}
+.best-for {
+  margin-top: 25px;
+  padding: 18px 0;
+  border-block: 1px solid var(--line);
+}
+.best-for > div {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.best-for span {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--paper);
+  font-size: 0.78rem;
+}
+.spec-table {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+}
+.spec-table > div {
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 15px;
+  border-bottom: 1px solid var(--line);
+}
+.spec-table > div:last-child {
+  border: 0;
+}
+.spec-table span {
+  color: var(--muted);
+}
+.included-section {
+  padding: 65px 0;
+  background: var(--ink);
+  color: #f7f0e8;
+}
+.included-section .eyebrow {
+  color: #efad7d;
+}
+.included-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 13px;
+}
+.included-grid article {
+  min-height: 145px;
+  padding: 19px;
+  border: 1px solid #5b4b42;
+  border-radius: 17px;
+}
+.included-grid span {
+  color: #efad7d;
+  font-size: 0.75rem;
+}
+.included-grid strong {
+  display: block;
+  margin: 15px 0 3px;
+  font:
+    500 1.15rem 'Fraunces',
+    serif;
+}
+.included-grid p {
+  margin: 0;
+  color: #cbbdb3;
+  font-size: 0.8rem;
+}
+.detail-notice {
+  padding: 28px 0;
+  background: #e7d8c4;
+}
+.detail-notice > .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.detail-notice p {
+  margin: 2px 0;
+  color: var(--muted);
+}
+.detail-notice a {
+  color: var(--rust);
+  font-weight: 700;
+}
+.not-found {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.not-found h1 {
+  font-family: 'Fraunces', serif;
+}
+.not-found a {
+  color: var(--rust);
+}
+@media (max-width: 950px) {
+  .detail-layout {
+    grid-template-columns: 1fr;
+  }
+  .gallery {
+    position: static;
+  }
+  .description-grid {
+    grid-template-columns: 1fr;
+  }
+  .included-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 620px) {
+  .detail-layout {
+    display: block;
+  }
+  .gallery {
+    grid-template-columns: 1fr;
+  }
+  .thumbs {
+    order: 2;
+    flex-direction: row;
+  }
+  .thumbs button {
+    width: 72px;
+  }
+  .main-product-image {
+    height: 385px;
+  }
+  .detail-info {
+    margin-top: 30px;
+  }
+  .detail-info h1 {
+    font-size: 2.7rem;
+  }
+  .detail-price {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .detail-price p:last-child {
+    text-align: left;
+  }
+  .date-fields,
+  .assurances {
+    grid-template-columns: 1fr;
+  }
+  .description-grid {
+    gap: 40px;
+  }
+  .spec-table > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+  .included-grid {
+    grid-template-columns: 1fr;
+  }
+  .detail-notice > .container {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+}
+.available-detail {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+}
+.available-detail span,
+.available-detail strong {
+  display: block;
+  padding: 5px 10px;
+  border-radius: 99px;
+  background: #eef5ef;
+}
+.available-detail span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.available-detail.unavailable strong {
+  background: #fff2e8;
+  color: #9a4c24;
+}

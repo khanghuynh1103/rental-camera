@@ -4,7 +4,7 @@
   z-index: 8;
   padding: 16px 0;
   border-block: 1px solid var(--line);
-  background: rgba(244, 238, 228, .97);
+  background: rgba(244, 238, 228, 0.97);
   backdrop-filter: blur(14px);
 }
 
@@ -23,15 +23,23 @@
 }
 
 .filter-heading > div span,
-.filter-heading > div small { display: block; }
-.filter-heading span { font-weight: 700; }
-.filter-heading small { margin-top: 1px; color: var(--muted); font-size: .78rem; }
+.filter-heading > div small {
+  display: block;
+}
+.filter-heading span {
+  font-weight: 700;
+}
+.filter-heading small {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
 .filter-heading > strong {
   padding: 5px 10px;
   border-radius: 99px;
   background: #fffaf2;
   color: var(--rust);
-  font-size: .75rem;
+  font-size: 0.75rem;
 }
 
 .brand-filters {
@@ -46,7 +54,9 @@
   min-width: 0;
 }
 
-.catalog-filter-menu { position: relative; }
+.catalog-filter-menu {
+  position: relative;
+}
 
 .brand-filters > button,
 .catalog-filter-menu > button {
@@ -58,11 +68,13 @@
   border-radius: 12px;
   background: #e9dfd2;
   color: var(--ink);
-  font-size: .9rem;
+  font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.2;
   text-align: center;
-  transition: background .2s, transform .2s;
+  transition:
+    background 0.2s,
+    transform 0.2s;
 }
 
 .brand-filters > button:hover,
@@ -87,7 +99,10 @@
   line-height: inherit;
 }
 
-.filter-button-label { font-size: inherit; line-height: inherit; }
+.filter-button-label {
+  font-size: inherit;
+  line-height: inherit;
+}
 
 .filter-button-content > i {
   position: absolute;
@@ -102,7 +117,9 @@
 }
 
 .brand-filters > button.active .filter-button-content > i,
-.catalog-filter-menu > button.active .filter-button-content > i { visibility: visible; }
+.catalog-filter-menu > button.active .filter-button-content > i {
+  visibility: visible;
+}
 
 .filter-button-arrow {
   position: absolute;
@@ -116,7 +133,7 @@
 }
 
 .filter-button-arrow::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 3px;
   left: 4px;
@@ -127,11 +144,13 @@
   transform: rotate(45deg);
 }
 
-.catalog-filter-menu > button[aria-expanded=true] .filter-button-arrow::after {
+.catalog-filter-menu > button[aria-expanded='true'] .filter-button-arrow::after {
   transform: rotate(225deg);
 }
 
-.filter-button-spacer { display: none; }
+.filter-button-spacer {
+  display: none;
+}
 
 .catalog-filter-dropdown {
   position: absolute;
@@ -144,7 +163,7 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--paper);
-  box-shadow: 0 18px 40px rgba(43, 33, 28, .17);
+  box-shadow: 0 18px 40px rgba(43, 33, 28, 0.17);
 }
 
 .brand-filters .catalog-filter-dropdown button {
@@ -161,12 +180,14 @@
   background: transparent;
   color: var(--ink);
   text-align: left;
-  font-size: .86rem;
+  font-size: 0.86rem;
   font-weight: 700;
   transform: none;
 }
 
-.brand-filters .catalog-filter-dropdown button:last-child { border-bottom: 0; }
+.brand-filters .catalog-filter-dropdown button:last-child {
+  border-bottom: 0;
+}
 .brand-filters .catalog-filter-dropdown button:hover,
 .brand-filters .catalog-filter-dropdown button.selected {
   border-radius: 8px;
@@ -182,7 +203,11 @@
   gap: 16px;
 }
 
-.catalog-filter-dropdown small { color: var(--muted); font-size: .7rem; font-weight: 400; }
+.catalog-filter-dropdown small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 400;
+}
 
 .catalog-controls {
   padding-top: 14px;
@@ -192,9 +217,19 @@
   border-top: 1px solid #d2c3af;
 }
 
-.catalog-controls form { width: 100%; display: flex; }
-.catalog-controls input { width: 100%; min-width: 0; }
-.catalog-controls label { display: flex; align-items: center; gap: 6px; }
+.catalog-controls form {
+  width: 100%;
+  display: flex;
+}
+.catalog-controls input {
+  width: 100%;
+  min-width: 0;
+}
+.catalog-controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 
 .rental-period {
   margin-bottom: 22px;
@@ -218,11 +253,21 @@
   font-weight: 700;
 }
 
-.rental-period div { flex: 1; }
+.rental-period div {
+  flex: 1;
+}
 .rental-period strong,
-.rental-period small { display: block; }
-.rental-period small { color: var(--muted); }
-.rental-period a { color: var(--rust); font-weight: 700; font-size: .84rem; }
+.rental-period small {
+  display: block;
+}
+.rental-period small {
+  color: var(--muted);
+}
+.rental-period a {
+  color: var(--rust);
+  font-weight: 700;
+  font-size: 0.84rem;
+}
 
 .pagination {
   margin-top: 38px;
@@ -244,28 +289,70 @@
 }
 
 .pagination button:hover:not(:disabled),
-.pagination button.active { border-color: var(--ink); background: var(--ink); color: white; }
-.pagination button:disabled { opacity: .4; cursor: not-allowed; }
+.pagination button.active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: white;
+}
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 @media (max-width: 760px) {
-  .catalog-toolbar { position: relative; top: auto; }
+  .catalog-toolbar {
+    position: relative;
+    top: auto;
+  }
   .brand-filters > button,
-  .catalog-filter-menu { flex-basis: calc(50% - 5px); }
-  .catalog-filter-dropdown { left: auto; right: 0; min-width: min(260px, calc(100vw - 28px)); }
-  .catalog-controls { grid-template-columns: 1fr; }
-  .catalog-controls label { justify-content: space-between; }
-  .catalog-controls select { flex: 1; }
-  .rental-period { align-items: flex-start; flex-wrap: wrap; }
-  .rental-period a { margin-left: 47px; }
-  .pagination { flex-wrap: wrap; }
+  .catalog-filter-menu {
+    flex-basis: calc(50% - 5px);
+  }
+  .catalog-filter-dropdown {
+    left: auto;
+    right: 0;
+    min-width: min(260px, calc(100vw - 28px));
+  }
+  .catalog-controls {
+    grid-template-columns: 1fr;
+  }
+  .catalog-controls label {
+    justify-content: space-between;
+  }
+  .catalog-controls select {
+    flex: 1;
+  }
+  .rental-period {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .rental-period a {
+    margin-left: 47px;
+  }
+  .pagination {
+    flex-wrap: wrap;
+  }
   .pagination button:first-child,
-  .pagination button:last-child { order: 2; min-width: 105px; }
+  .pagination button:last-child {
+    order: 2;
+    min-width: 105px;
+  }
 }
 
 @media (max-width: 420px) {
-  .filter-heading > div small { display: none; }
+  .filter-heading > div small {
+    display: none;
+  }
   .brand-filters > button,
-  .catalog-filter-menu > button { font-size: .82rem; }
-  .pagination { gap: 5px; }
-  .pagination button { min-width: 38px; height: 38px; padding: 0 10px; }
+  .catalog-filter-menu > button {
+    font-size: 0.82rem;
+  }
+  .pagination {
+    gap: 5px;
+  }
+  .pagination button {
+    min-width: 38px;
+    height: 38px;
+    padding: 0 10px;
+  }
 }

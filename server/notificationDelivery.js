@@ -5,7 +5,11 @@ import { query } from './db.js';
 import { expireStaleRentals, generateReminders } from './rentalService.js';
 import { MAX_DELIVERY_ATTEMPTS, normalizeVnPhone, retryDelayMinutes, smsText } from './rules.js';
 
-const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+const escapeHtml = value =>
+  String(value).replace(
+    /[&<>"']/g,
+    char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]
+  );
 
 let transport;
 function smtpTransport() {
@@ -48,7 +52,10 @@ async function sendSms(delivery) {
   const base = process.env.TWILIO_BASE_URL || 'https://api.twilio.com';
   const response = await fetch(`${base}/2010-04-01/Accounts/${sid}/Messages.json`, {
     method: 'POST',
-    headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}`,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
     body: new URLSearchParams({ To: to, From: from, Body: smsText(delivery.subject, delivery.body) })
   });
   if (!response.ok) throw new Error(`Twilio trả về ${response.status}`);
@@ -58,37 +65,59 @@ async function sendSms(delivery) {
 async function deliver(delivery) {
   try {
     const result = await (delivery.channel === 'SMS' ? sendSms(delivery) : sendEmail(delivery));
-    await query(`UPDATE notification_deliveries SET status=$2,provider=$3,sent_at=NOW(),last_error=NULL WHERE id=$1`,
-      [delivery.id, result.simulated ? 'SIMULATED' : 'SENT', result.provider]);
+    await query(`UPDATE notification_deliveries SET status=$2,provider=$3,sent_at=NOW(),last_error=NULL WHERE id=$1`, [
+      delivery.id,
+      result.simulated ? 'SIMULATED' : 'SENT',
+      result.provider
+    ]);
   } catch (error) {
     const giveUp = error.permanent || delivery.attempts >= MAX_DELIVERY_ATTEMPTS;
-    await query(`UPDATE notification_deliveries SET status=$2,last_error=$3,next_attempt_at=NOW() + $4::INTERVAL WHERE id=$1`,
-      [delivery.id, giveUp ? 'FAILED' : 'PENDING', String(error.message).slice(0, 300), `${retryDelayMinutes(delivery.attempts)} minutes`]);
+    await query(
+      `UPDATE notification_deliveries SET status=$2,last_error=$3,next_attempt_at=NOW() + $4::INTERVAL WHERE id=$1`,
+      [
+        delivery.id,
+        giveUp ? 'FAILED' : 'PENDING',
+        String(error.message).slice(0, 300),
+        `${retryDelayMinutes(delivery.attempts)} minutes`
+      ]
+    );
   }
 }
 
 /** Nhận và gửi các bản ghi đến hạn. SKIP LOCKED cho phép nhiều tiến trình chạy song song mà không gửi trùng. */
 export async function dispatchPending({ limit = 20 } = {}) {
-  const claimed = await query(`
+  const claimed = await query(
+    `
     UPDATE notification_deliveries SET status='SENDING',claimed_at=NOW(),attempts=attempts+1
     WHERE id IN (
       SELECT id FROM notification_deliveries
       WHERE (status='PENDING' AND next_attempt_at<=NOW()) OR (status='SENDING' AND claimed_at<NOW() - INTERVAL '5 minutes')
       ORDER BY id LIMIT $1 FOR UPDATE SKIP LOCKED
-    ) RETURNING *`, [limit]);
+    ) RETURNING *`,
+    [limit]
+  );
   for (const delivery of claimed.rows) await deliver(delivery);
   return claimed.rowCount;
 }
 
-let running = false, again = false;
+let running = false,
+  again = false;
 /** Gửi ngay sau khi API trả lời, không chặn người dùng. Lỗi đã được ghi vào bản ghi để thử lại. */
 export function kickDispatch() {
-  if (running) { again = true; return; }
+  if (running) {
+    again = true;
+    return;
+  }
   running = true;
-  dispatchPending().catch(error => console.error('Không gửi được thông báo:', error.message)).finally(() => {
-    running = false;
-    if (again) { again = false; kickDispatch(); }
-  });
+  dispatchPending()
+    .catch(error => console.error('Không gửi được thông báo:', error.message))
+    .finally(() => {
+      running = false;
+      if (again) {
+        again = false;
+        kickDispatch();
+      }
+    });
 }
 
 /** Việc định kỳ: hủy đơn hết hạn giữ lịch, tạo nhắc hạn trả và gửi hàng đợi. */

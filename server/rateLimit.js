@@ -26,8 +26,16 @@ export function createLimiter({ windowMs, max, message }) {
   };
 }
 
-export const loginLimiter = createLimiter({ windowMs: 15 * 60 * 1000, max: Number(process.env.LOGIN_MAX_ATTEMPTS || 5), message: 'Bạn đã đăng nhập sai quá nhiều lần.' });
-export const registerLimiter = createLimiter({ windowMs: 60 * 60 * 1000, max: Number(process.env.REGISTER_MAX_PER_HOUR || 20), message: 'Bạn đã tạo quá nhiều tài khoản.' });
+export const loginLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.LOGIN_MAX_ATTEMPTS || 5),
+  message: 'Bạn đã đăng nhập sai quá nhiều lần.'
+});
+export const registerLimiter = createLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: Number(process.env.REGISTER_MAX_PER_HOUR || 20),
+  message: 'Bạn đã tạo quá nhiều tài khoản.'
+});
 
 export function tooMany(res, limiter, seconds) {
   res.set('Retry-After', String(seconds));

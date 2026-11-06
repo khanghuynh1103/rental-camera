@@ -3,7 +3,12 @@
 export const TIME_ZONE = 'Asia/Ho_Chi_Minh';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
+const formatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+});
 
 /** Chuỗi YYYY-MM-DD hợp lệ (loại cả ngày không tồn tại như 2026-02-30). */
 export function isIsoDate(value) {
