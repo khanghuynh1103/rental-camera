@@ -48,7 +48,7 @@ export default function Auth({ mode }) {
       <Typography.Text className="eyebrow">{registerMode ? 'Thành viên mới' : 'Chào mừng trở lại'}</Typography.Text>
       <Typography.Title level={1}>{registerMode ? 'Đăng ký' : 'Đăng nhập'}<br />tại trạm.</Typography.Title>
       <Typography.Paragraph>Nhập thông tin tài khoản để quản lý các đơn thuê của bạn.</Typography.Paragraph>
-      {loginNotice && <Alert type="warning" showIcon message="Vui lòng đăng nhập để xem chi tiết thiết bị." className="auth-error" />}
+      {loginNotice && <Alert type="warning" showIcon message="Vui lòng đăng nhập để tiếp tục đặt thuê thiết bị." className="auth-error" />}
       <Form layout="vertical" onFinish={submit} requiredMark={false} autoComplete="on">
         {registerMode && <Row gutter={12}>
           <Col xs={24} sm={12}><Form.Item label="Họ và tên" name="fullName" rules={[{ required: true, message: 'Vui lòng nhập họ tên.' }, { min: 2, message: 'Họ tên cần ít nhất 2 ký tự.' }]}><Input autoComplete="name" /></Form.Item></Col>

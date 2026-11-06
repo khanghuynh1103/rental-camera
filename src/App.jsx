@@ -38,7 +38,7 @@ export default function App() {
     <Route path="/products" element={<Products />} />
     <Route path="/about" element={<About />} />
     <Route path="/how-to-rent" element={<HowToRent />} />
-    <Route path="/products/:id" element={<CatalogDetailRoute><ProductDetail /></CatalogDetailRoute>} />
+    <Route path="/products/:id" element={<ProductDetail />} />
     <Route path="/booking" element={<CatalogDetailRoute><Booking /></CatalogDetailRoute>} />
     <Route path="/login" element={<Auth mode="login" />} />
     <Route path="/signup" element={<Auth mode="register" />} />

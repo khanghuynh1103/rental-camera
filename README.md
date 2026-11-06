@@ -6,18 +6,22 @@ Website thuê máy ảnh và thiết bị quay chụp, xây dựng bằng React,
 
 ## Tính năng chính
 
-- Danh mục thiết bị, tìm kiếm, lọc và xem chi tiết sản phẩm.
-- Kiểm tra thiết bị còn trống theo khoảng ngày.
-- Đăng ký, đăng nhập và lưu phiên bằng cookie.
-- Tạo đơn thuê, chọn giao tận nơi hoặc nhận tại cửa hàng.
-- Thanh toán và xuất hóa đơn mô phỏng.
-- Trang khách hàng để theo dõi đơn, cập nhật hồ sơ, yêu cầu gia hạn và thanh toán phí phát sinh.
-- Khách chỉ có thể gửi yêu cầu gia hạn trước hạn trả ít nhất 3 ngày; quản trị viên kiểm tra xung đột lịch trước khi duyệt.
-- Trang quản trị để theo dõi doanh thu, duyệt đơn, phân công nhân viên giao nhận, quản lý sản phẩm, kho thiết bị, người dùng, gia hạn và sự cố.
-- Trang nhân viên giao nhận chỉ hiển thị đơn được phân công, hỗ trợ chụp ảnh bằng chứng khi bàn giao và thu hồi thiết bị.
-- Đánh giá sản phẩm sau khi hoàn tất đơn thuê.
-- Trợ lý gợi ý thiết bị; có thể dùng OpenAI hoặc tự gợi ý từ dữ liệu PostgreSQL khi không cấu hình API key.
-- Giao diện responsive, nội dung tiếng Việt.
+- Danh mục thiết bị, tìm kiếm, lọc; **trang chi tiết và lịch trống theo ngày công khai** (chỉ cần đăng nhập khi đặt thuê).
+- Kiểm tra lịch theo **từng thiết bị vật lý**, có **1 ngày đệm** giữa hai đơn để kiểm tra/vận chuyển. Trùng lịch bị chặn ở cả API lẫn ràng buộc `EXCLUDE` của PostgreSQL.
+- Đặt **nhiều thiết bị trong một đơn** (tối đa 5), giao tận nơi hoặc nhận tại cửa hàng.
+- Thanh toán mô phỏng: online (phải thanh toán trong 30 phút để giữ lịch) hoặc trả khi bàn giao. Tiền cọc thu khi nhận máy, không tính vào doanh thu.
+- Đơn chờ duyệt quá 24 giờ (hoặc chưa thanh toán online sau 30 phút) tự hủy và giải phóng lịch.
+- Nhân viên giao nhận chỉ thấy đơn được phân công; **bàn giao và thu hồi bắt buộc ảnh bằng chứng** (nhiều ảnh, tự nén trên trình duyệt) và **checklist phụ kiện** theo từng sản phẩm. Đơn nhận tại cửa hàng do quản trị viên bàn giao/nhận lại với cùng yêu cầu.
+- Thu hồi: kiểm tra từng thiết bị (bình thường/trầy xước/hư hỏng/thiếu phụ kiện), tự tạo biên bản sự cố, **tự tính phí trả muộn** (150% giá thuê/ngày).
+- **Quyết toán tiền cọc**: phí gia hạn/trễ hạn/sự cố chưa thanh toán được trừ vào cọc, hoàn phần còn lại, phần vượt cọc thành khoản phải trả thêm; hóa đơn tách riêng từng loại.
+- Gia hạn: chỉ gửi khi còn ≥ 3 ngày trước hạn trả; hệ thống gợi ý ngày trả xa nhất trước đơn kế tiếp và kiểm tra lại khi duyệt.
+- Khách tự hủy đơn khi chờ duyệt hoặc chưa đến ngày nhận (hoàn tiền mô phỏng nếu đã thanh toán).
+- Khách xem chi tiết đơn: tiến trình, ảnh bàn giao/thu hồi, tiền cọc, hóa đơn, phí phát sinh; **thông báo trong ứng dụng** (xác nhận, giao, sắp đến hạn, quá hạn, quyết toán…).
+- Dashboard: doanh thu, tiền cọc đang giữ, **việc cần làm hôm nay** (cần giao, đến hạn trả, sắp đến hạn, quá hạn, chờ duyệt), kho thiết bị, sự cố.
+- Kho thiết bị: trạng thái theo đề cương (AVAILABLE, RESERVED, RENTED, RETURNING, INSPECTION, DAMAGED, MAINTENANCE, RETIRED). Chuyển thiết bị sang bảo trì sẽ tự chuyển các đơn sắp tới sang thiết bị cùng mẫu.
+- **Email và SMS** theo mô hình outbox: mọi thông báo được xếp hàng cùng transaction với nghiệp vụ, tự thử lại tối đa 5 lần khi nhà cung cấp lỗi; khách tự bật/tắt từng kênh; quản trị viên xem nhật ký gửi và gửi lại.
+- **Xác minh CCCD**: đơn có tổng tiền cọc từ 5.000.000đ chỉ được duyệt khi khách đã xác minh. Ảnh mã hóa AES-256-GCM, số CCCD chỉ giữ 4 số cuối và HMAC, ảnh bị xóa ngay sau khi duyệt/từ chối, mỗi lần xem đều ghi nhật ký.
+- Đánh giá sau thuê, trợ lý gợi ý thiết bị (OpenAI tùy chọn), giới hạn số lần đăng nhập sai, giao diện responsive tiếng Việt.
 
 ## Công nghệ sử dụng
 
@@ -85,19 +89,17 @@ Vite tự chuyển tiếp các request `/api` từ cổng `5173` sang backend �
 
 ## Khởi tạo cơ sở dữ liệu
 
-Với database PostgreSQL trống, chạy theo thứ tự:
+Với database PostgreSQL trống:
 
 ```bash
-npm run migrate:schema
-npm run migrate:products
-npm run seed:roles
+npm run setup        # = migrate + migrate:products + seed:roles
 ```
 
-`migrate:schema` tạo đầy đủ bảng, khóa ngoại và index cần thiết. `migrate:products` nạp danh mục, sản phẩm, ảnh và các thiết bị vật lý; `seed:roles` tạo tài khoản quản trị và giao nhận mẫu.
+`npm run migrate` là migration **hợp nhất và chạy lại an toàn**: tạo schema cho database trống, đồng thời nâng cấp database của phiên bản cũ (thêm cột, ràng buộc trạng thái, trigger đồng bộ lịch, ràng buộc chống trùng lịch, chuyển ảnh bằng chứng cũ sang bảng `evidence_images`). Khi cập nhật mã nguồn, chỉ cần chạy lại `npm run migrate`.
 
-Các migration được thiết kế để có thể chạy lại an toàn ở phần lớn thao tác (`IF NOT EXISTS`, `ON CONFLICT`), nhưng vẫn nên sao lưu database trước khi migration trên dữ liệu quan trọng.
+Ràng buộc chống trùng lịch cần extension `btree_gist` (có sẵn trên PostgreSQL chuẩn và Neon). Nếu không bật được hoặc dữ liệu cũ đang trùng lịch, migration bỏ qua ràng buộc và in cảnh báo; phần kiểm tra ở API vẫn hoạt động.
 
-Nếu nâng cấp một database cũ, chạy thêm các migration chuyên biệt trong bảng lệnh bên dưới. `migrate:users` và `migrate:rentals` chỉ dùng để nhập dữ liệu cũ từ `data/database.json`; chúng không cần thiết cho cài đặt mới.
+Nên sao lưu database trước khi migration trên dữ liệu quan trọng.
 
 ## Tài khoản mẫu
 
@@ -110,6 +112,21 @@ Sau khi chạy `npm run seed:roles`, hệ thống tạo/cập nhật:
 
 Đây là thông tin demo. Hãy đổi hoặc vô hiệu hóa các tài khoản này trước khi triển khai công khai.
 
+## Email, SMS và xác minh CCCD
+
+Mặc định `NOTIFY_EMAIL_PROVIDER=log` và `NOTIFY_SMS_PROVIDER=log`: thông báo được ghi nhận với trạng thái *Mô phỏng* nhưng không gửi thật, phù hợp để demo.
+
+Gửi thật:
+
+- Email: đặt `NOTIFY_EMAIL_PROVIDER=smtp` cùng `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` và `APP_URL`.
+- SMS: đặt `NOTIFY_SMS_PROVIDER=twilio` cùng `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. Gửi SMS tại Việt Nam thường cần đăng ký brandname với nhà cung cấp.
+
+Khi tự host, server chạy tác vụ định kỳ mỗi phút (hủy đơn hết hạn, nhắc hạn trả, gửi hàng đợi). Trên Vercel, `vercel.json` gọi `/api/cron/tick` mỗi ngày lúc 8 giờ sáng; cần đặt `CRON_SECRET`. Gói Hobby chỉ cho cron hằng ngày, nên nhắc hạn trên Vercel chạy một lần/ngày.
+
+Xác minh CCCD cần `KYC_ENCRYPTION_KEY` (32 byte, lệnh tạo có trong `.env.example`). **Mất khóa này thì không giải mã được hồ sơ đang chờ duyệt.** Ngưỡng tiền cọc cấu hình ở `identityDepositThreshold` trong `server/rules.js`.
+
+Bản demo công khai không nên nhận CCCD thật. Khi vận hành thật, cửa hàng cần có chính sách bảo vệ dữ liệu cá nhân và tuân thủ quy định hiện hành.
+
 ## Các lệnh npm
 
 | Lệnh | Chức năng |
@@ -118,16 +135,11 @@ Sau khi chạy `npm run seed:roles`, hệ thống tạo/cập nhật:
 | `npm run build` | Build frontend vào thư mục `dist/`. |
 | `npm start` | Build frontend rồi chạy Express ở chế độ phục vụ ứng dụng. |
 | `npm run check` | Kiểm tra mã nguồn bằng ESLint. |
-| `npm run test:workflow` | Chạy kiểm thử tích hợp cho quy trình thuê/giao nhận. |
-| `npm run migrate:schema` | Tạo đầy đủ schema PostgreSQL từ database trống. |
-| `npm run migrate:users` | Nhập người dùng cũ vào PostgreSQL. |
+| `npm test` / `npm run test:unit` | Unit test quy tắc nghiệp vụ (`server/tests`), không cần database. |
+| `npm run test:workflow` | Kiểm thử tích hợp toàn bộ vòng đời đơn thuê qua API + PostgreSQL. |
+| `npm run setup` | Khởi tạo database trống: schema, sản phẩm, tài khoản mẫu. |
+| `npm run migrate` | Tạo/nâng cấp schema (an toàn khi chạy lại). |
 | `npm run migrate:products` | Nhập/cập nhật danh mục, sản phẩm, ảnh và thiết bị kho. |
-| `npm run migrate:rentals` | Nhập đơn thuê cũ và bổ sung các cột liên quan. |
-| `npm run migrate:rental-workflow` | Tạo lịch sử trạng thái đơn thuê. |
-| `npm run migrate:delivery-workflow` | Tạo log giao nhận và sự cố thiết bị. |
-| `npm run migrate:post-rental` | Tạo dữ liệu gia hạn và phí phát sinh. |
-| `npm run migrate:sessions` | Tạo bảng lưu phiên đăng nhập. |
-| `npm run migrate:reviews` | Tạo bảng đánh giá sản phẩm. |
 | `npm run seed:roles` | Tạo tài khoản quản trị và giao nhận mẫu. |
 
 ## Cấu trúc thư mục
@@ -189,14 +201,17 @@ Kiểm thử workflow tạo và thay đổi dữ liệu. Chỉ chạy trên data
 
 Vercel build giao diện Vite vào `dist/`, phục vụ ảnh trong `img/` và chuyển request `/api/*` đến Express Function qua `vercel.json`. Vì Vercel không cung cấp PostgreSQL trực tiếp, cần tạo database ở một nhà cung cấp như Neon rồi đặt `DATABASE_URL` trong biến môi trường của Vercel. Chọn khu vực Function gần khu vực database để giảm độ trễ.
 
-Trước lần triển khai đầu, đặt `DATABASE_URL`, `DEMO_ADMIN_PASSWORD` và `DEMO_DELIVERY_PASSWORD` trong môi trường dùng để khởi tạo database rồi chạy `node server/bootstrap-hosted.js` **một lần**. Hai mật khẩu demo phải khác nhau, mỗi mật khẩu ít nhất 12 ký tự; không ghi chúng vào GitHub. Script tạo schema, dữ liệu sản phẩm và hai tài khoản demo khi database còn trống. Không chạy `npm run seed:roles` trên database công khai vì lệnh đó dùng mật khẩu mẫu cố định.
+Trước lần triển khai đầu, đặt `DATABASE_URL`, `DEMO_ADMIN_PASSWORD` và `DEMO_DELIVERY_PASSWORD` trong môi trường dùng để khởi tạo database rồi chạy `node server/bootstrap-hosted.js` **một lần**. Hai mật khẩu demo phải khác nhau, mỗi mật khẩu ít nhất 12 ký tự; không ghi chúng vào GitHub. Script chạy migration (tạo mới hoặc nâng cấp schema), nạp dữ liệu sản phẩm nếu còn trống và tạo hai tài khoản demo. Khi cập nhật phiên bản mới, chạy lại script này để nâng cấp database đã triển khai. Không chạy `npm run seed:roles` trên database công khai vì lệnh đó dùng mật khẩu mẫu cố định.
 
 Import repository `khanghuynh1103/rental-camera` vào Vercel, chọn root là thư mục gốc, thêm `DATABASE_URL` cho Production và triển khai. Sau đó kiểm tra trang chủ, `/api/products`, ảnh sản phẩm, đăng nhập và tạo đơn trước khi gửi URL `*.vercel.app` cho người xem. Giới hạn lưu trữ và thời gian hoạt động của PostgreSQL phụ thuộc gói dịch vụ database đã chọn.
 
 ## Hạn chế hiện tại
 
-- Chưa có bộ test unit/frontend tự động; hiện chỉ có kiểm thử workflow backend.
-- Thanh toán, hóa đơn và các kênh VNPAY/ATM/thẻ đều là dữ liệu mô phỏng.
-- Ảnh bằng chứng giao nhận hiện được lưu trực tiếp trong PostgreSQL để phù hợp môi trường demo; production nên chuyển sang object storage.
-- Ảnh sản phẩm do quản trị viên quản lý bằng URL, chưa có kho upload riêng.
-
+- Chưa có kiểm thử frontend tự động; backend có unit test cho quy tắc nghiệp vụ và kiểm thử workflow tích hợp.
+- Thanh toán, hoàn tiền, hóa đơn và các kênh VNPAY/ATM/thẻ đều là mô phỏng.
+- Email/SMS mới được kiểm thử với máy chủ SMTP và API Twilio giả lập, chưa thử với tài khoản nhà cung cấp thật.
+- Xác minh CCCD do quản trị viên đối chiếu thủ công, chưa dùng OCR hay đối chiếu với cơ sở dữ liệu quốc gia.
+- Vercel giới hạn request khoảng 4,5 MB, nên hồ sơ có ảnh lớn có thể bị từ chối dù ảnh đã nén.
+- Ảnh bằng chứng lưu trong PostgreSQL (BYTEA) để phù hợp môi trường demo; production nên chuyển sang object storage.
+- Giới hạn đăng nhập sai lưu trong bộ nhớ tiến trình; khi chạy nhiều instance cần chuyển sang Redis/PostgreSQL.
+- Quy tắc nghiệp vụ (ngày đệm, phí trễ, thời gian giữ lịch…) cấu hình trong `server/rules.js`; đổi `bufferDays` cần chạy lại `npm run migrate`.

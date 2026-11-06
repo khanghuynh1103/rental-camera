@@ -9,7 +9,8 @@ async function request(url, options = {}) {
   try { data = body ? JSON.parse(body) : {}; } catch { data = {}; }
   if (!response.ok) {
     const message = data.message || (response.status === 413
-      ? 'Dữ liệu tải lên quá lớn. Vui lòng chọn ảnh nhỏ hơn 3 MB.'
+      ? 'Dữ liệu tải lên quá lớn. Vui lòng bớt số ảnh hoặc chụp lại.'
+      : response.status === 429 ? 'Bạn thao tác quá nhiều lần. Vui lòng thử lại sau.'
       : `Yêu cầu thất bại (${response.status}). Vui lòng thử lại.`);
     throw Object.assign(new Error(message), { status: response.status, errors: data.errors });
   }
@@ -22,6 +23,7 @@ export const api = {
   productReviews: id => request(`/api/products/${id}/reviews`),
   createReview: (id, values) => request(`/api/products/${id}/reviews`, { method: 'POST', body: JSON.stringify(values) }),
   recommend: message => request('/api/chat/recommend', { method: 'POST', body: JSON.stringify({ message }) }),
+  productCalendar: (id, params={}) => request(`/api/products/${id}/calendar?${new URLSearchParams(params)}`),
   availability: (id, dates) => request(`/api/products/${id}/availability`, { method: 'POST', body: JSON.stringify(dates) }),
   createRental: values => request('/api/rentals', { method: 'POST', body: JSON.stringify(values) }),
   completePayment: id => request(`/api/rentals/${id}/payment`, { method: 'POST' }),
@@ -37,6 +39,9 @@ export const api = {
   deliveryStaff: () => request('/api/admin/delivery-staff'),
   assignDeliveryStaff: (id, staffId) => request(`/api/admin/rentals/${id}/assignment`, { method: 'PATCH', body: JSON.stringify({ staffId }) }),
   updateRentalStatus: (id, values) => request(`/api/admin/rentals/${id}/status`, { method: 'PATCH', body: JSON.stringify(values) }),
+  storeHandover: (id, values) => request(`/api/admin/rentals/${id}/handover`, { method: 'POST', body: JSON.stringify(values) }),
+  storeReturn: (id, values) => request(`/api/admin/rentals/${id}/return`, { method: 'POST', body: JSON.stringify(values) }),
+  remindCustomer: (id, message) => request(`/api/admin/rentals/${id}/remind`, { method: 'POST', body: JSON.stringify({ message }) }),
   adminUsers: () => request('/api/admin/users'),
   adminCategories: () => request('/api/admin/categories'),
   adminProducts: (filters={}) => request(`/api/admin/products?${new URLSearchParams(filters)}`),
@@ -51,6 +56,20 @@ export const api = {
   deliveryTask: id => request(`/api/delivery/tasks/${id}`),
   updateDeliveryTask: (id, values) => request(`/api/delivery/tasks/${id}/status`, { method: 'PATCH', body: JSON.stringify(values) }),
   accountRentals: () => request('/api/account/rentals'),
+  accountRental: id => request(`/api/account/rentals/${id}`),
+  cancelRental: (id, reason) => request(`/api/account/rentals/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  extensionOptions: id => request(`/api/account/rentals/${id}/extension-options`),
+  identityStatus: () => request('/api/account/identity'),
+  submitIdentity: values => request('/api/account/identity', { method: 'POST', body: JSON.stringify(values) }),
+  withdrawIdentity: () => request('/api/account/identity', { method: 'DELETE' }),
+  adminIdentity: (filters={}) => request(`/api/admin/identity?${new URLSearchParams(filters)}`),
+  reviewIdentity: (id, values) => request(`/api/admin/identity/${id}`, { method: 'PATCH', body: JSON.stringify(values) }),
+  adminDeliveries: (filters={}) => request(`/api/admin/notification-deliveries?${new URLSearchParams(filters)}`),
+  retryDelivery: id => request(`/api/admin/notification-deliveries/${id}/retry`, { method: 'POST' }),
+  notificationPreferences: () => request('/api/account/notification-preferences'),
+  updateNotificationPreferences: values => request('/api/account/notification-preferences', { method: 'PATCH', body: JSON.stringify(values) }),
+  notifications: () => request('/api/account/notifications'),
+  markNotificationsRead: () => request('/api/account/notifications/read', { method: 'POST' }),
   requestExtension: (id, values) => request(`/api/account/rentals/${id}/extensions`, { method: 'POST', body: JSON.stringify(values) }),
   payExtraCharge: id => request(`/api/account/charges/${id}/payment`, { method: 'POST' }),
   adminExtensions: () => request('/api/admin/extensions'),
