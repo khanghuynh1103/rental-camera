@@ -1,34 +1,70 @@
 // Nhãn hiển thị và định dạng dùng chung cho các màn hình khách hàng, quản trị và giao nhận.
 export const rentalStatusLabels = {
-  PENDING: 'Chờ duyệt', CONFIRMED: 'Đã xác nhận', DELIVERING: 'Đang giao', RENTING: 'Đang thuê',
-  RETURNING: 'Đang thu hồi', INSPECTING: 'Đang kiểm tra', COMPLETED: 'Hoàn tất', CANCELLED: 'Đã hủy'
+  PENDING: 'Chờ duyệt',
+  CONFIRMED: 'Đã xác nhận',
+  DELIVERING: 'Đang giao',
+  RENTING: 'Đang thuê',
+  RETURNING: 'Đang thu hồi',
+  INSPECTING: 'Đang kiểm tra',
+  COMPLETED: 'Hoàn tất',
+  CANCELLED: 'Đã hủy'
 };
 
 export const equipmentStatusLabels = {
-  AVAILABLE: 'Sẵn sàng', RESERVED: 'Đã đặt', RENTED: 'Đang cho thuê', RETURNING: 'Đang thu hồi',
-  INSPECTION: 'Đang kiểm tra', DAMAGED: 'Hư hỏng', MAINTENANCE: 'Bảo trì', RETIRED: 'Ngừng sử dụng'
+  AVAILABLE: 'Sẵn sàng',
+  RESERVED: 'Đã đặt',
+  RENTED: 'Đang cho thuê',
+  RETURNING: 'Đang thu hồi',
+  INSPECTION: 'Đang kiểm tra',
+  DAMAGED: 'Hư hỏng',
+  MAINTENANCE: 'Bảo trì',
+  RETIRED: 'Ngừng sử dụng'
 };
 
 export const paymentStatusLabels = {
-  PENDING: 'Chờ thanh toán', PAID_SIMULATED: 'Đã thanh toán', REFUNDED_SIMULATED: 'Đã hoàn tiền', VOID: 'Đã hủy', SETTLED_BY_DEPOSIT: 'Đã trừ vào cọc'
+  PENDING: 'Chờ thanh toán',
+  PAID_SIMULATED: 'Đã thanh toán',
+  REFUNDED_SIMULATED: 'Đã hoàn tiền',
+  VOID: 'Đã hủy',
+  SETTLED_BY_DEPOSIT: 'Đã trừ vào cọc'
 };
 
 export const depositStatusLabels = {
-  NOT_COLLECTED: 'Chưa thu', HELD: 'Đang giữ', REFUNDED: 'Đã hoàn đủ', PARTIALLY_REFUNDED: 'Đã hoàn một phần', FULLY_DEDUCTED: 'Đã khấu trừ hết', NONE: 'Không có'
+  NOT_COLLECTED: 'Chưa thu',
+  HELD: 'Đang giữ',
+  REFUNDED: 'Đã hoàn đủ',
+  PARTIALLY_REFUNDED: 'Đã hoàn một phần',
+  FULLY_DEDUCTED: 'Đã khấu trừ hết',
+  NONE: 'Không có'
 };
 
 export const chargeTypeLabels = {
-  EXTENSION: 'Phí gia hạn', INCIDENT: 'Phí sự cố thiết bị', LATE_RETURN: 'Phí trả muộn', DEPOSIT_SHORTFALL: 'Phí vượt tiền cọc'
+  EXTENSION: 'Phí gia hạn',
+  INCIDENT: 'Phí sự cố thiết bị',
+  LATE_RETURN: 'Phí trả muộn',
+  DEPOSIT_SHORTFALL: 'Phí vượt tiền cọc'
 };
 
-export const invoiceTypeLabels = { RENTAL: 'Tiền thuê', EXTRA_CHARGE: 'Phí phát sinh', SETTLEMENT: 'Khấu trừ quyết toán' };
+export const invoiceTypeLabels = {
+  RENTAL: 'Tiền thuê',
+  EXTRA_CHARGE: 'Phí phát sinh',
+  SETTLEMENT: 'Khấu trừ quyết toán'
+};
 
-export const incidentLabels = { SCRATCHED: 'Trầy xước', DAMAGED: 'Hư hỏng', MISSING_ACCESSORIES: 'Thiếu phụ kiện', GOOD: 'Bình thường' };
+export const incidentLabels = {
+  SCRATCHED: 'Trầy xước',
+  DAMAGED: 'Hư hỏng',
+  MISSING_ACCESSORIES: 'Thiếu phụ kiện',
+  GOOD: 'Bình thường'
+};
 
 export const conditionLabels = { GOOD: 'Bình thường', SCRATCHED: 'Trầy xước', DAMAGED: 'Hư hỏng' };
 
 export const logActionLabels = {
-  DELIVERING: 'Nhận thiết bị, bắt đầu giao', RENTING: 'Bàn giao cho khách', RETURNING: 'Bắt đầu thu hồi', RETURNED: 'Nhận lại và kiểm tra',
+  DELIVERING: 'Nhận thiết bị, bắt đầu giao',
+  RENTING: 'Bàn giao cho khách',
+  RETURNING: 'Bắt đầu thu hồi',
+  RETURNED: 'Nhận lại và kiểm tra',
   COMPLETED: 'Thu hồi (dữ liệu cũ)'
 };
 
@@ -47,7 +83,13 @@ export function formatDate(value) {
 export const formatDateTime = value => (value ? new Date(value).toLocaleString('vi-VN') : '—');
 
 /** Ngày hôm nay theo giờ Việt Nam, dạng YYYY-MM-DD (dùng cho thuộc tính min của ô chọn ngày). */
-export const todayVN = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+export const todayVN = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
 
 export function addDays(isoDate, days) {
   const date = new Date(`${isoDate}T00:00:00Z`);
@@ -55,4 +97,5 @@ export function addDays(isoDate, days) {
   return date.toISOString().slice(0, 10);
 }
 
-export const daysBetween = (from, to) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000);
+export const daysBetween = (from, to) =>
+  Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000);

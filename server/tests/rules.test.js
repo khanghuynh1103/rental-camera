@@ -1,8 +1,18 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  RULES, canCustomerCancel, canRequestExtension, depositStatusAfterSettlement, incidentTypeFor, lateDays, lateFee,
-  maxExtensionEnd, rangesConflict, rentalDays, settleDeposit, validateRentalPeriod
+  RULES,
+  canCustomerCancel,
+  canRequestExtension,
+  depositStatusAfterSettlement,
+  incidentTypeFor,
+  lateDays,
+  lateFee,
+  maxExtensionEnd,
+  rangesConflict,
+  rentalDays,
+  settleDeposit,
+  validateRentalPeriod
 } from '../rules.js';
 import { addDays, diffDays, isIsoDate, todayVN } from '../time.js';
 
@@ -35,7 +45,10 @@ describe('Số ngày thuê và khoảng ngày hợp lệ', () => {
     assert.match(validateRentalPeriod('2026-09-09', '2026-09-14', today), /quá khứ/);
     assert.match(validateRentalPeriod('2026-09-14', '2026-09-12', today), /Ngày trả/);
     assert.match(validateRentalPeriod('2026-09-12', addDays('2026-09-12', RULES.maxRentalDays), today), /tối đa/);
-    assert.match(validateRentalPeriod(addDays(today, RULES.maxAdvanceDays + 1), addDays(today, RULES.maxAdvanceDays + 2), today), /đặt trước/);
+    assert.match(
+      validateRentalPeriod(addDays(today, RULES.maxAdvanceDays + 1), addDays(today, RULES.maxAdvanceDays + 2), today),
+      /đặt trước/
+    );
   });
 });
 
@@ -86,11 +99,21 @@ describe('Quyết toán tiền cọc', () => {
     assert.equal(depositStatusAfterSettlement(5000000, 5000000), 'REFUNDED');
   });
   it('khấu trừ phí vào cọc và hoàn phần còn lại', () => {
-    assert.deepEqual(settleDeposit(5000000, [150000, 900000]), { totalCharges: 1050000, deducted: 1050000, refund: 3950000, shortfall: 0 });
+    assert.deepEqual(settleDeposit(5000000, [150000, 900000]), {
+      totalCharges: 1050000,
+      deducted: 1050000,
+      refund: 3950000,
+      shortfall: 0
+    });
     assert.equal(depositStatusAfterSettlement(5000000, 3950000), 'PARTIALLY_REFUNDED');
   });
   it('phần phí vượt cọc trở thành khoản phải trả thêm', () => {
-    assert.deepEqual(settleDeposit(1000000, [1500000]), { totalCharges: 1500000, deducted: 1000000, refund: 0, shortfall: 500000 });
+    assert.deepEqual(settleDeposit(1000000, [1500000]), {
+      totalCharges: 1500000,
+      deducted: 1000000,
+      refund: 0,
+      shortfall: 500000
+    });
     assert.equal(depositStatusAfterSettlement(1000000, 0), 'FULLY_DEDUCTED');
     assert.equal(depositStatusAfterSettlement(0, 0), 'NONE');
   });

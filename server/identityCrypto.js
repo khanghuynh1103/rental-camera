@@ -27,5 +27,8 @@ export function decryptBuffer({ iv, ciphertext, authTag }, keyValue = process.en
 }
 
 export function hashIdNumber(idNumber, keyValue = process.env.KYC_ENCRYPTION_KEY) {
-  return crypto.createHmac('sha256', deriveKey(parseKey(keyValue), 'tma-identity-number')).update(String(idNumber)).digest('hex');
+  return crypto
+    .createHmac('sha256', deriveKey(parseKey(keyValue), 'tma-identity-number'))
+    .update(String(idNumber))
+    .digest('hex');
 }

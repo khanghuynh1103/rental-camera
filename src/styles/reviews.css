@@ -1,1 +1,78 @@
-.reviews-section{padding:75px 0;background:var(--cream)}.reviews-section h2.ant-typography{margin:8px 0;color:var(--ink);font:600 clamp(2.1rem,4vw,3.4rem) "Fraunces",serif}.reviews-intro{color:var(--muted)}.reviews-summary{margin:20px 0 28px;display:flex;align-items:center;gap:14px}.reviews-summary>strong{font:600 2.2rem "Fraunces",serif;color:var(--rust)}.reviews-summary>span{color:var(--muted)}.review-form-card.ant-card,.review-card.ant-card{border-color:var(--line);border-radius:18px;background:var(--paper)}.review-form-card{margin:22px 0 28px}.review-form-card .ant-card-head{font-family:"Fraunces",serif;font-size:1.3rem}.review-form-card .ant-form-item{max-width:640px}.reviews-alert{margin:18px 0}.review-list{display:grid;gap:15px}.review-card-head{margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:14px}.review-card-head small{display:block;color:var(--muted)}.review-card p.ant-typography{margin-bottom:8px}.review-card p.ant-typography:last-child{margin-bottom:0}@media(max-width:600px){.reviews-section{padding:55px 0}.review-card-head{align-items:flex-start;flex-direction:column}}
+.reviews-section {
+  padding: 75px 0;
+  background: var(--cream);
+}
+.reviews-section h2.ant-typography {
+  margin: 8px 0;
+  color: var(--ink);
+  font:
+    600 clamp(2.1rem, 4vw, 3.4rem) 'Fraunces',
+    serif;
+}
+.reviews-intro {
+  color: var(--muted);
+}
+.reviews-summary {
+  margin: 20px 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.reviews-summary > strong {
+  font:
+    600 2.2rem 'Fraunces',
+    serif;
+  color: var(--rust);
+}
+.reviews-summary > span {
+  color: var(--muted);
+}
+.review-form-card.ant-card,
+.review-card.ant-card {
+  border-color: var(--line);
+  border-radius: 18px;
+  background: var(--paper);
+}
+.review-form-card {
+  margin: 22px 0 28px;
+}
+.review-form-card .ant-card-head {
+  font-family: 'Fraunces', serif;
+  font-size: 1.3rem;
+}
+.review-form-card .ant-form-item {
+  max-width: 640px;
+}
+.reviews-alert {
+  margin: 18px 0;
+}
+.review-list {
+  display: grid;
+  gap: 15px;
+}
+.review-card-head {
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+.review-card-head small {
+  display: block;
+  color: var(--muted);
+}
+.review-card p.ant-typography {
+  margin-bottom: 8px;
+}
+.review-card p.ant-typography:last-child {
+  margin-bottom: 0;
+}
+@media (max-width: 600px) {
+  .reviews-section {
+    padding: 55px 0;
+  }
+  .review-card-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

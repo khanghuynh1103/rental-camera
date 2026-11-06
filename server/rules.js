@@ -22,7 +22,16 @@ export const RULES = Object.freeze({
 
 export const IDENTITY_CONSENT_VERSION = '2026-11';
 /** Sự kiện đủ quan trọng để gửi SMS; mọi thông báo khác chỉ gửi email và hiển thị trong ứng dụng. */
-export const SMS_KINDS = ['CONFIRMED', 'DELIVERING', 'RETURNING', 'DUE_SOON', 'OVERDUE', 'CANCELLED', 'EXPIRED', 'REMINDER'];
+export const SMS_KINDS = [
+  'CONFIRMED',
+  'DELIVERING',
+  'RETURNING',
+  'DUE_SOON',
+  'OVERDUE',
+  'CANCELLED',
+  'EXPIRED',
+  'REMINDER'
+];
 export const MAX_DELIVERY_ATTEMPTS = 5;
 
 /** Trạng thái đơn còn giữ lịch thiết bị. */
@@ -46,7 +55,8 @@ export function validateRentalPeriod(startDate, endDate, today, rules = RULES) {
   if (!isIsoDate(startDate) || !isIsoDate(endDate)) return 'Ngày thuê không hợp lệ.';
   if (startDate < today) return 'Ngày nhận không được nằm trong quá khứ.';
   if (endDate < startDate) return 'Ngày trả phải sau hoặc trùng ngày nhận.';
-  if (diffDays(today, startDate) > rules.maxAdvanceDays) return `Chỉ nhận đặt trước tối đa ${rules.maxAdvanceDays} ngày.`;
+  if (diffDays(today, startDate) > rules.maxAdvanceDays)
+    return `Chỉ nhận đặt trước tối đa ${rules.maxAdvanceDays} ngày.`;
   if (rentalDays(startDate, endDate) > rules.maxRentalDays) return `Mỗi đơn thuê tối đa ${rules.maxRentalDays} ngày.`;
   return null;
 }
@@ -125,6 +135,12 @@ export function retryDelayMinutes(attempts) {
 
 /** SMS không dấu trong 160 ký tự để tính một tin nhắn. */
 export function smsText(title, body = '') {
-  const plain = `Tram May Anh: ${title}. ${body}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').replace(/\s+/g, ' ').trim();
+  const plain = `Tram May Anh: ${title}. ${body}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/\s+/g, ' ')
+    .trim();
   return plain.length > 160 ? `${plain.slice(0, 157)}...` : plain;
 }

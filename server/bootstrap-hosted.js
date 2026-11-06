@@ -28,15 +28,29 @@ try {
   }
 
   const accounts = [
-    { name: 'Quản trị viên', email: 'admin@trammayanh.vn', phone: '0900000000', role: 'ADMIN', password: DEMO_ADMIN_PASSWORD },
-    { name: 'Nhân viên giao nhận', email: 'giaonhan@trammayanh.vn', phone: '0900000001', role: 'DELIVERY_STAFF', password: DEMO_DELIVERY_PASSWORD }
+    {
+      name: 'Quản trị viên',
+      email: 'admin@trammayanh.vn',
+      phone: '0900000000',
+      role: 'ADMIN',
+      password: DEMO_ADMIN_PASSWORD
+    },
+    {
+      name: 'Nhân viên giao nhận',
+      email: 'giaonhan@trammayanh.vn',
+      phone: '0900000001',
+      role: 'DELIVERY_STAFF',
+      password: DEMO_DELIVERY_PASSWORD
+    }
   ];
 
   for (const account of accounts) {
     const { hash, salt } = hashPassword(account.password);
-    await pool.query(`INSERT INTO users (full_name, email, phone, password_hash, password_salt, role)
+    await pool.query(
+      `INSERT INTO users (full_name, email, phone, password_hash, password_salt, role)
       VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (email) DO NOTHING`,
-    [account.name, account.email, account.phone, hash, salt, account.role]);
+      [account.name, account.email, account.phone, hash, salt, account.role]
+    );
   }
 
   console.log('Database đã sẵn sàng cho website công khai.');

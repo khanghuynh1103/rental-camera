@@ -5,8 +5,14 @@ function loadImage(file) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const image = new Image();
-    image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
-    image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Không đọc được ảnh. Hãy chụp lại hoặc chọn ảnh JPEG/PNG.')); };
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Không đọc được ảnh. Hãy chụp lại hoặc chọn ảnh JPEG/PNG.'));
+    };
     image.src = url;
   });
 }

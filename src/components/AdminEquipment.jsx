@@ -5,14 +5,203 @@ import { api } from '../api';
 import { equipmentStatusLabels as statuses } from '../labels';
 
 // Trạng thái quản trị viên được chọn thủ công; các trạng thái khác do quy trình thuê tự cập nhật.
-const manualStatuses=['AVAILABLE','MAINTENANCE','DAMAGED','RETIRED'];
-const conditions={GOOD:'Tốt',FAIR:'Đã qua sử dụng',DAMAGED:'Hư hỏng'};
-export default function AdminEquipment(){
-  const [items,setItems]=useState([]),[products,setProducts]=useState([]),[query,setQuery]=useState(''),[filterQuery,setFilterQuery]=useState(''),[status,setStatus]=useState(''),[page,setPage]=useState(1),[pages,setPages]=useState(1),[adding,setAdding]=useState(false),[message,setMessage]=useState('');
-  const load=async()=>{try{const [result,productData]=await Promise.all([api.adminEquipment({q:filterQuery,status,page}),api.adminProducts({active:'all',page:1,limit:100})]);setItems(result.equipment);setPages(result.totalPages);setProducts(productData.products)}catch(e){setMessage(e.message)}};
-  useEffect(()=>{let live=true;Promise.all([api.adminEquipment({q:filterQuery,status,page}),api.adminProducts({active:'all',page:1,limit:100})]).then(([result,productData])=>{if(live){setItems(result.equipment);setPages(result.totalPages);setProducts(productData.products)}}).catch(e=>live&&setMessage(e.message));return()=>{live=false}},[page,status,filterQuery]);
-  const search=e=>{e.preventDefault();setPage(1);setFilterQuery(query)};
-  const update=async(item,field,value)=>{try{const next={status:item.status,condition:item.condition,[field]:value};const result=await api.updateEquipment(item.id,next);setMessage(result.message);await load()}catch(e){setMessage(e.message)}};
-  const add=async e=>{e.preventDefault();const values=Object.fromEntries(new FormData(e.currentTarget));try{const result=await api.createEquipment(values);setMessage(result.message);setAdding(false);await load()}catch(error){setMessage(error.message)}};
-  return <section className="role-card admin-section"><div className="section-head"><div><h2>Kho thiết bị</h2><p>Quản lý từng thiết bị vật lý bằng mã kho riêng. Chuyển sang bảo trì sẽ tự chuyển các đơn sắp tới sang thiết bị cùng mẫu.</p></div><UiButton className="admin-primary" onClick={()=>setAdding(true)}>+ Nhập thiết bị</UiButton></div>{message&&<p className="admin-message">{message}</p>}<form className="admin-filters" onSubmit={search}><Input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Tìm mã thiết bị hoặc sản phẩm"/><select value={status} onChange={e=>{setStatus(e.target.value);setPage(1)}}><option value="">Mọi trạng thái</option>{Object.entries(statuses).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><UiButton>Tìm kiếm</UiButton></form><div className="table-scroll"><table><thead><tr><th>Mã thiết bị</th><th>Sản phẩm</th><th>Tình trạng</th><th>Trạng thái kho</th></tr></thead><tbody>{items.map(item=><tr key={item.id}><td><b>{item.equipmentCode}</b></td><td>{item.productName}</td><td><select value={item.condition} onChange={e=>update(item,'condition',e.target.value)}>{Object.entries(conditions).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></td><td>{manualStatuses.includes(item.status)||item.status==='RESERVED'?<select value={item.status} onChange={e=>update(item,'status',e.target.value)}>{item.status==='RESERVED'&&<option value="RESERVED">{statuses.RESERVED}</option>}{manualStatuses.map(value=><option key={value} value={value}>{statuses[value]}</option>)}</select>:<span className="status" title="Trạng thái do quy trình thuê quản lý">{statuses[item.status]||item.status}</span>}</td></tr>)}</tbody></table></div><div className="admin-pagination"><UiButton disabled={page===1} onClick={()=>setPage(page-1)}>←</UiButton><span>Trang {page}/{pages}</span><UiButton disabled={page===pages} onClick={()=>setPage(page+1)}>→</UiButton></div>{adding&&<div className="admin-modal" onMouseDown={e=>e.target===e.currentTarget&&setAdding(false)}><form className="admin-form small" onSubmit={add}><div className="section-head"><h2>Nhập thiết bị mới</h2><UiButton type="button" className="close" onClick={()=>setAdding(false)}>×</UiButton></div><label>Sản phẩm<select name="productId" required><option value="">Chọn sản phẩm</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Mã thiết bị<Input name="equipmentCode" required minLength="3" placeholder="CAM-SONY-A7IV-004"/></label><label>Tình trạng<select name="condition"><option value="GOOD">Tốt</option><option value="FAIR">Đã qua sử dụng</option><option value="DAMAGED">Hư hỏng</option></select></label><UiButton className="admin-primary">Thêm vào kho</UiButton></form></div>}</section>;
+const manualStatuses = ['AVAILABLE', 'MAINTENANCE', 'DAMAGED', 'RETIRED'];
+const conditions = { GOOD: 'Tốt', FAIR: 'Đã qua sử dụng', DAMAGED: 'Hư hỏng' };
+export default function AdminEquipment() {
+  const [items, setItems] = useState([]),
+    [products, setProducts] = useState([]),
+    [query, setQuery] = useState(''),
+    [filterQuery, setFilterQuery] = useState(''),
+    [status, setStatus] = useState(''),
+    [page, setPage] = useState(1),
+    [pages, setPages] = useState(1),
+    [adding, setAdding] = useState(false),
+    [message, setMessage] = useState('');
+  const load = async () => {
+    try {
+      const [result, productData] = await Promise.all([
+        api.adminEquipment({ q: filterQuery, status, page }),
+        api.adminProducts({ active: 'all', page: 1, limit: 100 })
+      ]);
+      setItems(result.equipment);
+      setPages(result.totalPages);
+      setProducts(productData.products);
+    } catch (e) {
+      setMessage(e.message);
+    }
+  };
+  useEffect(() => {
+    let live = true;
+    Promise.all([
+      api.adminEquipment({ q: filterQuery, status, page }),
+      api.adminProducts({ active: 'all', page: 1, limit: 100 })
+    ])
+      .then(([result, productData]) => {
+        if (live) {
+          setItems(result.equipment);
+          setPages(result.totalPages);
+          setProducts(productData.products);
+        }
+      })
+      .catch(e => live && setMessage(e.message));
+    return () => {
+      live = false;
+    };
+  }, [page, status, filterQuery]);
+  const search = e => {
+    e.preventDefault();
+    setPage(1);
+    setFilterQuery(query);
+  };
+  const update = async (item, field, value) => {
+    try {
+      const next = { status: item.status, condition: item.condition, [field]: value };
+      const result = await api.updateEquipment(item.id, next);
+      setMessage(result.message);
+      await load();
+    } catch (e) {
+      setMessage(e.message);
+    }
+  };
+  const add = async e => {
+    e.preventDefault();
+    const values = Object.fromEntries(new FormData(e.currentTarget));
+    try {
+      const result = await api.createEquipment(values);
+      setMessage(result.message);
+      setAdding(false);
+      await load();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  };
+  return (
+    <section className="role-card admin-section">
+      <div className="section-head">
+        <div>
+          <h2>Kho thiết bị</h2>
+          <p>
+            Quản lý từng thiết bị vật lý bằng mã kho riêng. Chuyển sang bảo trì sẽ tự chuyển các đơn sắp tới sang thiết
+            bị cùng mẫu.
+          </p>
+        </div>
+        <UiButton className="admin-primary" onClick={() => setAdding(true)}>
+          + Nhập thiết bị
+        </UiButton>
+      </div>
+      {message && <p className="admin-message">{message}</p>}
+      <form className="admin-filters" onSubmit={search}>
+        <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Tìm mã thiết bị hoặc sản phẩm" />
+        <select
+          value={status}
+          onChange={e => {
+            setStatus(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">Mọi trạng thái</option>
+          {Object.entries(statuses).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <UiButton>Tìm kiếm</UiButton>
+      </form>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Mã thiết bị</th>
+              <th>Sản phẩm</th>
+              <th>Tình trạng</th>
+              <th>Trạng thái kho</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map(item => (
+              <tr key={item.id}>
+                <td>
+                  <b>{item.equipmentCode}</b>
+                </td>
+                <td>{item.productName}</td>
+                <td>
+                  <select value={item.condition} onChange={e => update(item, 'condition', e.target.value)}>
+                    {Object.entries(conditions).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>
+                  {manualStatuses.includes(item.status) || item.status === 'RESERVED' ? (
+                    <select value={item.status} onChange={e => update(item, 'status', e.target.value)}>
+                      {item.status === 'RESERVED' && <option value="RESERVED">{statuses.RESERVED}</option>}
+                      {manualStatuses.map(value => (
+                        <option key={value} value={value}>
+                          {statuses[value]}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="status" title="Trạng thái do quy trình thuê quản lý">
+                      {statuses[item.status] || item.status}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="admin-pagination">
+        <UiButton disabled={page === 1} onClick={() => setPage(page - 1)}>
+          ←
+        </UiButton>
+        <span>
+          Trang {page}/{pages}
+        </span>
+        <UiButton disabled={page === pages} onClick={() => setPage(page + 1)}>
+          →
+        </UiButton>
+      </div>
+      {adding && (
+        <div className="admin-modal" onMouseDown={e => e.target === e.currentTarget && setAdding(false)}>
+          <form className="admin-form small" onSubmit={add}>
+            <div className="section-head">
+              <h2>Nhập thiết bị mới</h2>
+              <UiButton type="button" className="close" onClick={() => setAdding(false)}>
+                ×
+              </UiButton>
+            </div>
+            <label>
+              Sản phẩm
+              <select name="productId" required>
+                <option value="">Chọn sản phẩm</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Mã thiết bị
+              <Input name="equipmentCode" required minLength="3" placeholder="CAM-SONY-A7IV-004" />
+            </label>
+            <label>
+              Tình trạng
+              <select name="condition">
+                <option value="GOOD">Tốt</option>
+                <option value="FAIR">Đã qua sử dụng</option>
+                <option value="DAMAGED">Hư hỏng</option>
+              </select>
+            </label>
+            <UiButton className="admin-primary">Thêm vào kho</UiButton>
+          </form>
+        </div>
+      )}
+    </section>
+  );
 }

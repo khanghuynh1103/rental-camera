@@ -135,17 +135,37 @@ const tables = [
 // Danh sách giá trị hợp lệ cho các cột trạng thái (đồng bộ với đề cương mục 6.8 và quy trình đơn thuê).
 const statusChecks = {
   users_role_check: ['users', 'role', ['CUSTOMER', 'ADMIN', 'DELIVERY_STAFF']],
-  equipment_items_status_check: ['equipment_items', 'status', ['AVAILABLE', 'RESERVED', 'RENTED', 'RETURNING', 'INSPECTION', 'DAMAGED', 'MAINTENANCE', 'RETIRED']],
+  equipment_items_status_check: [
+    'equipment_items',
+    'status',
+    ['AVAILABLE', 'RESERVED', 'RENTED', 'RETURNING', 'INSPECTION', 'DAMAGED', 'MAINTENANCE', 'RETIRED']
+  ],
   equipment_items_condition_check: ['equipment_items', 'condition', ['GOOD', 'FAIR', 'DAMAGED']],
-  rentals_status_check: ['rentals', 'status', ['PENDING', 'CONFIRMED', 'DELIVERING', 'RENTING', 'RETURNING', 'INSPECTING', 'COMPLETED', 'CANCELLED']],
-  rentals_deposit_status_check: ['rentals', 'deposit_status', ['NOT_COLLECTED', 'HELD', 'REFUNDED', 'PARTIALLY_REFUNDED', 'FULLY_DEDUCTED', 'NONE']],
+  rentals_status_check: [
+    'rentals',
+    'status',
+    ['PENDING', 'CONFIRMED', 'DELIVERING', 'RENTING', 'RETURNING', 'INSPECTING', 'COMPLETED', 'CANCELLED']
+  ],
+  rentals_deposit_status_check: [
+    'rentals',
+    'deposit_status',
+    ['NOT_COLLECTED', 'HELD', 'REFUNDED', 'PARTIALLY_REFUNDED', 'FULLY_DEDUCTED', 'NONE']
+  ],
   payments_status_check: ['payments', 'status', ['PENDING', 'PAID_SIMULATED', 'REFUNDED_SIMULATED', 'VOID']],
-  extra_charges_payment_status_check: ['extra_charges', 'payment_status', ['PENDING', 'PAID_SIMULATED', 'SETTLED_BY_DEPOSIT']],
+  extra_charges_payment_status_check: [
+    'extra_charges',
+    'payment_status',
+    ['PENDING', 'PAID_SIMULATED', 'SETTLED_BY_DEPOSIT']
+  ],
   invoices_type_check: ['invoices', 'invoice_type', ['RENTAL', 'EXTRA_CHARGE', 'SETTLEMENT']]
 };
-const dropStatusChecks = Object.entries(statusChecks).map(([name, [table]]) => `ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${name}`);
-const addStatusChecks = Object.entries(statusChecks).map(([name, [table, column, values]]) =>
-  `ALTER TABLE ${table} ADD CONSTRAINT ${name} CHECK (${column} IN (${values.map(value => `'${value}'`).join(',')}))`);
+const dropStatusChecks = Object.entries(statusChecks).map(
+  ([name, [table]]) => `ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${name}`
+);
+const addStatusChecks = Object.entries(statusChecks).map(
+  ([name, [table, column, values]]) =>
+    `ALTER TABLE ${table} ADD CONSTRAINT ${name} CHECK (${column} IN (${values.map(value => `'${value}'`).join(',')}))`
+);
 
 // Nâng cấp các database đã tạo bằng phiên bản cũ.
 const upgrades = [
@@ -299,7 +319,8 @@ async function addOverlapConstraint() {
       ON a.equipment_item_id=b.equipment_item_id AND a.id<b.id AND a.active AND b.active
      AND daterange(a.start_date,a.block_end_date,'[]') && daterange(b.start_date,b.block_end_date,'[]')
     LIMIT 5`);
-  if (conflicts.rowCount) return `bỏ qua vì dữ liệu cũ đang trùng lịch (${conflicts.rows.map(row => `${row.rental_id}/${row.other}`).join(', ')})`;
+  if (conflicts.rowCount)
+    return `bỏ qua vì dữ liệu cũ đang trùng lịch (${conflicts.rows.map(row => `${row.rental_id}/${row.other}`).join(', ')})`;
   await query(`ALTER TABLE rental_items ADD CONSTRAINT rental_items_no_overlap
     EXCLUDE USING gist (equipment_item_id WITH =, daterange(start_date, block_end_date, '[]') WITH &&)
     WHERE (active AND equipment_item_id IS NOT NULL)`);
@@ -308,11 +329,15 @@ async function addOverlapConstraint() {
 
 export async function migrate({ log = console.log } = {}) {
   const database = await testDatabaseConnection();
-  for (const statement of [...tables, ...upgrades, ...addStatusChecks, ...functions, ...indexes]) await query(statement);
+  for (const statement of [...tables, ...upgrades, ...addStatusChecks, ...functions, ...indexes])
+    await query(statement);
 
   for (const [slug, items] of Object.entries(defaultIncluded)) {
-    await query(`UPDATE products p SET included_items=$2 FROM categories c
-      WHERE c.id=p.category_id AND c.slug=$1 AND cardinality(p.included_items)=0`, [slug, items]);
+    await query(
+      `UPDATE products p SET included_items=$2 FROM categories c
+      WHERE c.id=p.category_id AND c.slug=$1 AND cardinality(p.included_items)=0`,
+      [slug, items]
+    );
   }
   await query(`INSERT INTO rental_status_history(rental_id,from_status,to_status,note)
     SELECT r.id,NULL,r.status,'Trạng thái ban đầu' FROM rentals r

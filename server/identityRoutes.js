@@ -6,23 +6,34 @@ import { httpError, notifyUser, parseEvidenceImages } from './rentalService.js';
 import { IDENTITY_CONSENT_VERSION, RULES, validateCccd } from './rules.js';
 
 const router = Router();
-const customerOnly = [requireAuth, requireRole('CUSTOMER')], adminOnly = [requireAuth, requireRole('ADMIN')];
+const customerOnly = [requireAuth, requireRole('CUSTOMER')],
+  adminOnly = [requireAuth, requireRole('ADMIN')];
 const clean = value => String(value ?? '').trim();
 const SIDES = ['front', 'back', 'selfie'];
 
-const publicRow = row => row && {
-  id: row.id, status: row.status, fullName: row.full_name, idLast4: row.id_last4, reviewNote: row.review_note,
-  createdAt: row.created_at, reviewedAt: row.reviewed_at
-};
+const publicRow = row =>
+  row && {
+    id: row.id,
+    status: row.status,
+    fullName: row.full_name,
+    idLast4: row.id_last4,
+    reviewNote: row.review_note,
+    createdAt: row.created_at,
+    reviewedAt: row.reviewed_at
+  };
 
 router.get('/account/identity', ...customerOnly, async (req, res) => {
-  const result = await query('SELECT * FROM identity_verifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1', [req.user.id]);
+  const result = await query('SELECT * FROM identity_verifications WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1', [
+    req.user.id
+  ]);
   res.json({ verification: publicRow(result.rows[0]) || null, depositThreshold: RULES.identityDepositThreshold });
 });
 
 router.post('/account/identity', ...customerOnly, async (req, res) => {
-  const fullName = clean(req.body.fullName), idNumber = clean(req.body.idNumber);
-  if (req.body.consent !== true) return res.status(422).json({ message: 'Bạn cần đồng ý cho phép xử lý dữ liệu CCCD để tiếp tục.' });
+  const fullName = clean(req.body.fullName),
+    idNumber = clean(req.body.idNumber);
+  if (req.body.consent !== true)
+    return res.status(422).json({ message: 'Bạn cần đồng ý cho phép xử lý dữ liệu CCCD để tiếp tục.' });
   if (fullName.length < 2) return res.status(422).json({ message: 'Vui lòng nhập họ tên đúng như trên CCCD.' });
   if (!validateCccd(idNumber)) return res.status(422).json({ message: 'Số CCCD phải gồm đúng 12 chữ số.' });
   const images = SIDES.map(side => {
@@ -48,8 +59,10 @@ router.post('/account/identity', ...customerOnly, async (req, res) => {
     });
     res.status(201).json({ message: 'Đã gửi hồ sơ xác minh. Cửa hàng sẽ phản hồi sớm.', verification: publicRow(row) });
   } catch (error) {
-    if (error.constraint === 'uq_identity_active_user') return res.status(409).json({ message: 'Tài khoản đã có hồ sơ đang chờ duyệt hoặc đã được xác minh.' });
-    if (error.constraint === 'uq_identity_active_number') return res.status(409).json({ message: 'Số CCCD này đã được dùng cho một tài khoản khác.' });
+    if (error.constraint === 'uq_identity_active_user')
+      return res.status(409).json({ message: 'Tài khoản đã có hồ sơ đang chờ duyệt hoặc đã được xác minh.' });
+    if (error.constraint === 'uq_identity_active_number')
+      return res.status(409).json({ message: 'Số CCCD này đã được dùng cho một tài khoản khác.' });
     throw error;
   }
 });
@@ -62,7 +75,9 @@ router.delete('/account/identity', ...customerOnly, async (req, res) => {
 });
 
 router.get('/admin/identity', ...adminOnly, async (req, res) => {
-  const status = ['PENDING', 'APPROVED', 'REJECTED'].includes(clean(req.query.status)) ? clean(req.query.status) : 'PENDING';
+  const status = ['PENDING', 'APPROVED', 'REJECTED'].includes(clean(req.query.status))
+    ? clean(req.query.status)
+    : 'PENDING';
   const result = await query(
     `SELECT v.id, v.status, v.full_name AS "fullName", v.id_last4 AS "idLast4", v.review_note AS "reviewNote", v.created_at AS "createdAt",
        v.reviewed_at AS "reviewedAt", v.images_purged_at AS "imagesPurgedAt", u.email, u.phone, u.full_name AS "accountName", reviewer.full_name AS "reviewedBy"
@@ -75,19 +90,30 @@ router.get('/admin/identity', ...adminOnly, async (req, res) => {
 
 router.get('/admin/identity/:id/images/:side', ...adminOnly, async (req, res) => {
   if (!SIDES.includes(req.params.side)) return res.status(404).json({ message: 'Không tìm thấy ảnh.' });
-  const result = await query('SELECT * FROM identity_images WHERE verification_id=$1 AND side=$2', [req.params.id, req.params.side]);
-  if (!result.rowCount) return res.status(404).json({ message: 'Không tìm thấy ảnh hoặc ảnh đã được xóa sau khi duyệt.' });
+  const result = await query('SELECT * FROM identity_images WHERE verification_id=$1 AND side=$2', [
+    req.params.id,
+    req.params.side
+  ]);
+  if (!result.rowCount)
+    return res.status(404).json({ message: 'Không tìm thấy ảnh hoặc ảnh đã được xóa sau khi duyệt.' });
   const image = result.rows[0];
   const data = decryptBuffer({ iv: image.iv, ciphertext: image.ciphertext, authTag: image.auth_tag });
-  await query('INSERT INTO identity_access_log(verification_id,admin_id,action) VALUES($1,$2,$3)', [req.params.id, req.user.id, `VIEW_${req.params.side.toUpperCase()}`]);
+  await query('INSERT INTO identity_access_log(verification_id,admin_id,action) VALUES($1,$2,$3)', [
+    req.params.id,
+    req.user.id,
+    `VIEW_${req.params.side.toUpperCase()}`
+  ]);
   res.set('Cache-Control', 'no-store');
   res.type(image.mime_type).send(data);
 });
 
 router.patch('/admin/identity/:id', ...adminOnly, async (req, res) => {
-  const decision = clean(req.body.status).toUpperCase(), note = clean(req.body.note);
-  if (!['APPROVED', 'REJECTED'].includes(decision)) return res.status(422).json({ message: 'Quyết định không hợp lệ.' });
-  if (decision === 'REJECTED' && !note) return res.status(422).json({ message: 'Vui lòng nhập lý do từ chối để khách bổ sung hồ sơ.' });
+  const decision = clean(req.body.status).toUpperCase(),
+    note = clean(req.body.note);
+  if (!['APPROVED', 'REJECTED'].includes(decision))
+    return res.status(422).json({ message: 'Quyết định không hợp lệ.' });
+  if (decision === 'REJECTED' && !note)
+    return res.status(422).json({ message: 'Vui lòng nhập lý do từ chối để khách bổ sung hồ sơ.' });
   await withTransaction(async client => {
     const found = await client.query('SELECT * FROM identity_verifications WHERE id=$1 FOR UPDATE', [req.params.id]);
     if (!found.rowCount) throw httpError(404, 'Không tìm thấy hồ sơ xác minh.');
@@ -99,12 +125,23 @@ router.patch('/admin/identity/:id', ...adminOnly, async (req, res) => {
     );
     // Giảm thiểu dữ liệu: duyệt xong là xóa ảnh, chỉ giữ 4 số cuối và kết quả.
     await client.query('DELETE FROM identity_images WHERE verification_id=$1', [row.id]);
-    await client.query('INSERT INTO identity_access_log(verification_id,admin_id,action) VALUES($1,$2,$3)', [row.id, req.user.id, decision]);
-    await notifyUser(client, row.user_id, 'IDENTITY',
+    await client.query('INSERT INTO identity_access_log(verification_id,admin_id,action) VALUES($1,$2,$3)', [
+      row.id,
+      req.user.id,
+      decision
+    ]);
+    await notifyUser(
+      client,
+      row.user_id,
+      'IDENTITY',
       decision === 'APPROVED' ? 'Đã xác minh CCCD thành công' : 'Hồ sơ CCCD chưa được chấp nhận',
-      decision === 'APPROVED' ? 'Bạn có thể thuê các thiết bị giá trị cao.' : `Lý do: ${note}. Vui lòng gửi lại hồ sơ.`);
+      decision === 'APPROVED' ? 'Bạn có thể thuê các thiết bị giá trị cao.' : `Lý do: ${note}. Vui lòng gửi lại hồ sơ.`
+    );
   });
-  res.json({ message: decision === 'APPROVED' ? 'Đã duyệt hồ sơ và xóa ảnh CCCD.' : 'Đã từ chối hồ sơ và xóa ảnh CCCD.', status: decision });
+  res.json({
+    message: decision === 'APPROVED' ? 'Đã duyệt hồ sơ và xóa ảnh CCCD.' : 'Đã từ chối hồ sơ và xóa ảnh CCCD.',
+    status: decision
+  });
 });
 
 export default router;

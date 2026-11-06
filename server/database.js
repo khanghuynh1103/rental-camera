@@ -7,8 +7,11 @@ export const hashPassword = (password, salt = crypto.randomBytes(16).toString('h
 });
 
 export const verifyPassword = (password, user) => {
-  const salt = user.passwordSalt ?? user.password_salt, hash = user.passwordHash ?? user.password_hash;
-  return Boolean(salt && hash) && crypto.timingSafeEqual(crypto.scryptSync(password, salt, 64), Buffer.from(hash, 'hex'));
+  const salt = user.passwordSalt ?? user.password_salt,
+    hash = user.passwordHash ?? user.password_hash;
+  return (
+    Boolean(salt && hash) && crypto.timingSafeEqual(crypto.scryptSync(password, salt, 64), Buffer.from(hash, 'hex'))
+  );
 };
 
 export const publicUser = source => ({

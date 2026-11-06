@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { decryptBuffer, encryptBuffer, hashIdNumber } from '../identityCrypto.js';
 import { normalizeVnPhone, requiresIdentity, retryDelayMinutes, smsText, validateCccd } from '../rules.js';
 
-const key = 'a'.repeat(64), otherKey = 'b'.repeat(64);
+const key = 'a'.repeat(64),
+  otherKey = 'b'.repeat(64);
 
 describe('Mã hóa dữ liệu CCCD', () => {
   it('giải mã đúng dữ liệu gốc và bản mã không chứa dữ liệu gốc', () => {
@@ -15,11 +16,15 @@ describe('Mã hóa dữ liệu CCCD', () => {
   it('từ chối giải mã khi sai khóa hoặc dữ liệu bị sửa', () => {
     const sealed = encryptBuffer(Buffer.from('du-lieu'), key);
     assert.throws(() => decryptBuffer(sealed, otherKey));
-    const tampered = Buffer.from(sealed.ciphertext); tampered[0] ^= 1;
+    const tampered = Buffer.from(sealed.ciphertext);
+    tampered[0] ^= 1;
     assert.throws(() => decryptBuffer({ ...sealed, ciphertext: tampered }, key));
   });
   it('không xử lý khi chưa cấu hình khóa', () => {
-    assert.throws(() => encryptBuffer(Buffer.from('x'), ''), error => error.status === 503);
+    assert.throws(
+      () => encryptBuffer(Buffer.from('x'), ''),
+      error => error.status === 503
+    );
   });
   it('băm số CCCD ổn định theo khóa và không lộ số gốc', () => {
     const hash = hashIdNumber('079123456789', key);
