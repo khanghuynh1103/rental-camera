@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { listProducts } from './productRepository.js';
+import { runAgent } from './chatAgent.js';
 
 const router = Router();
 const requests = new Map();
@@ -104,37 +105,7 @@ function recommend(message, products) {
   }));
 }
 
-async function aiAnswer(message, recommendations) {
-  if (!process.env.OPENAI_API_KEY) return null;
-  const context = recommendations.map(item => `${item.name}: ${item.spec}; ${item.price} đồng/ngày`).join('\n');
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
-      instructions:
-        'Bạn là trợ lý tìm thiết bị của Trạm Máy Ảnh. Trả lời bằng tiếng Việt, ngắn gọn, thân thiện. Chỉ gợi ý sản phẩm trong danh sách được cung cấp, không bịa giá, tồn kho hoặc thông số. Nếu thiếu thông tin về nhu cầu hoặc ngân sách, hỏi thêm một câu. Không khẳng định lịch trống cho ngày cụ thể; hướng dẫn khách kiểm tra lịch trên trang sản phẩm.',
-      input: `Nhu cầu khách: ${message}\nSản phẩm gợi ý có thật trong kho:\n${context || 'Chưa có sản phẩm phù hợp.'}`,
-      max_output_tokens: 250
-    }),
-    signal: AbortSignal.timeout(10000)
-  });
-  if (!response.ok) {
-    const detail = await response.json().catch(() => ({}));
-    const error = new Error(`OpenAI API: ${response.status}${detail.error?.code ? ` (${detail.error.code})` : ''}`);
-    error.status = response.status;
-    error.code = detail.error?.code || detail.error?.type || null;
-    throw error;
-  }
-  const data = await response.json();
-  return (
-    data.output
-      ?.flatMap(item => item.content || [])
-      .filter(item => item.type === 'output_text')
-      .map(item => item.text)
-      .join('\n') || null
-  );
-}
+export { recommend };
 
 router.post('/chat/recommend', async (req, res) => {
   const message = String(req.body?.message || '').trim();
@@ -147,36 +118,39 @@ router.post('/chat/recommend', async (req, res) => {
     return res.status(429).json({ message: 'Bạn gửi quá nhanh. Vui lòng thử lại sau một phút.' });
   recent.push(now);
   requests.set(key, recent);
-  const products = await listProducts();
-  const recommendations = recommend(message, products);
-  let answer = null;
+  let result = null;
   let aiNotice = null;
   try {
-    answer = await aiAnswer(message, recommendations);
+    result = await runAgent(message, req.body?.history);
   } catch (error) {
-    console.error('AI recommendation failed:', error.message);
+    console.error('AI assistant failed:', error.message);
     const quotaCodes = new Set([
       'insufficient_quota',
       'credit_balance_exhausted',
       'organization_usage_limit_exceeded',
       'organization_spend_limit_exceeded',
-      'project_spend_limit_exceeded'
+      'project_spend_limit_exceeded',
+      'RESOURCE_EXHAUSTED'
     ]);
     aiNotice =
-      error.status === 429
-        ? quotaCodes.has(error.code)
-          ? 'AI đang tạm ngừng vì tài khoản API đã hết credit hoặc chạm giới hạn chi tiêu. Hãy kiểm tra Billing và Limits trên OpenAI Platform.'
-          : 'AI đang bị giới hạn số yêu cầu. Vui lòng thử lại sau; các sản phẩm bên dưới vẫn được lọc trực tiếp từ kho.'
-        : error.name === 'TimeoutError'
-          ? 'AI phản hồi quá lâu. Các sản phẩm bên dưới vẫn được lọc trực tiếp từ kho.'
-          : 'AI tạm thời không phản hồi. Các sản phẩm bên dưới vẫn được lọc trực tiếp từ kho.';
+      error.status === 401 || error.status === 403
+        ? 'AI đang tắt vì khóa API của nhà cung cấp AI không hợp lệ hoặc đã hết hạn. Các sản phẩm bên dưới vẫn được lọc trực tiếp từ kho.'
+        : error.status === 429
+          ? quotaCodes.has(error.code)
+            ? 'AI đang tạm ngừng vì tài khoản API đã hết credit hoặc chạm giới hạn chi tiêu. Hãy kiểm tra hạn mức trong trang quản lý API của nhà cung cấp.'
+            : 'AI đang bị giới hạn số yêu cầu. Vui lòng thử lại sau; các sản phẩm bên dưới vẫn được lọc trực tiếp từ kho.'
+          : error.name === 'TimeoutError'
+            ? 'AI phản hồi quá lâu. Các sản phẩm bên dưới vẫn được lọc trực tiếp từ kho.'
+            : 'AI tạm thời không phản hồi. Các sản phẩm bên dưới vẫn được lọc trực tiếp từ kho.';
   }
-  const aiEnabled = Boolean(answer);
-  if (!answer)
-    answer = recommendations.length
-      ? `Mình tìm được ${recommendations.length} thiết bị có thể phù hợp. Bạn xem các mẫu bên dưới nhé. Nếu cho mình biết mục đích chụp/quay và ngân sách mỗi ngày, mình sẽ gợi ý sát hơn.`
-      : 'Hiện chưa tìm được thiết bị phù hợp. Bạn thử mô tả mục đích chụp/quay hoặc ngân sách mỗi ngày nhé.';
-  res.json({ answer, recommendations, aiEnabled, aiNotice });
+  if (result) return res.json({ ...result, aiEnabled: true, aiNotice: null });
+
+  // Phương án dự phòng: lọc theo luật và từ khóa khi không có AI.
+  const recommendations = recommend(message, await listProducts());
+  const answer = recommendations.length
+    ? `Mình tìm được ${recommendations.length} thiết bị có thể phù hợp. Bạn xem các mẫu bên dưới nhé. Nếu cho mình biết mục đích chụp/quay và ngân sách mỗi ngày, mình sẽ gợi ý sát hơn.`
+    : 'Hiện chưa tìm được thiết bị phù hợp. Bạn thử mô tả mục đích chụp/quay hoặc ngân sách mỗi ngày nhé.';
+  res.json({ answer, recommendations, steps: [], aiEnabled: false, aiNotice });
 });
 
 export default router;

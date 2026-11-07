@@ -17,7 +17,8 @@
     "format:check": "prettier --check server api src",
     "test": "npm run test:unit",
     "test:unit": "node --test \"server/tests/*.test.js\"",
-    "test:workflow": "node server/test-workflow.js"
+    "test:workflow": "node server/test-workflow.js",
+    "test:perf": "node server/perf-check.js"
   },
   "dependencies": {
     "@ant-design/icons": "6.3.4",

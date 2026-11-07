@@ -1,6 +1,7 @@
 // Kiểm thử tích hợp toàn bộ vòng đời đơn thuê: gọi REST API thật và đối chiếu dữ liệu PostgreSQL.
 // Chỉ chạy trên database phát triển/thử nghiệm. Dữ liệu kiểm thử được dọn sau khi chạy.
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import http from 'node:http';
 import net from 'node:net';
 import { hashPassword } from './database.js';
@@ -21,6 +22,9 @@ const today = todayVN(),
 const image =
   'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAAAP/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AKAA/9k=';
 const results = [];
+// Kết quả chi tiết từng ca, ghi ra file khi đặt WORKFLOW_REPORT (dùng làm bảng ca kiểm thử trong báo cáo).
+const cases = [];
+let group = '';
 const smtpPort = 3198,
   smsPort = 3197,
   cronSecret = 'workflow-cron-secret';
@@ -93,6 +97,7 @@ async function waitFor(condition, name) {
   for (let attempt = 0; attempt < 60; attempt++) {
     if (await condition()) {
       results.push(name);
+      cases.push({ group, name, actual: 'Điều kiện được xác nhận trong database/máy chủ giả lập', status: 'Đạt' });
       return;
     }
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -103,7 +108,8 @@ let server,
   serverError = '';
 const created = { products: [], users: [] };
 
-function check(condition, name, detail = '') {
+function check(condition, name, detail = '', actual = '') {
+  cases.push({ group, name, actual: actual || detail || 'Đúng như mong đợi', status: condition ? 'Đạt' : 'Chưa đạt' });
   if (!condition) throw new Error(`${name}${detail ? `: ${detail}` : ''}`);
   results.push(name);
 }
@@ -134,8 +140,10 @@ async function expectStatus(status, name, path, options = {}, cookie = '') {
   check(
     response.status === status,
     name,
-    `mong đợi ${status}, nhận ${response.status} (${response.data.message || ''})`
+    `mong đợi ${status}, nhận ${response.status} (${response.data.message || ''})`,
+    `HTTP ${response.status}${response.data.message ? `: ${response.data.message}` : ''}`
   );
+  cases.at(-1).expected = `HTTP ${status}`;
   return response;
 }
 
@@ -284,7 +292,7 @@ try {
   await waitForServer();
   check(!serverError.includes('EADDRINUSE'), 'Khởi động server kiểm thử');
 
-  /* ---------------- Khách vãng lai, xác thực, phân quyền ---------------- */
+  group = 'Khách vãng lai, xác thực, phân quyền';
   const publicProducts = await ok('/products?limit=24');
   check(publicProducts.data.products.length > 0, 'API sản phẩm công khai');
   const chat = await ok('/chat/recommend', json('POST', { message: 'Tìm máy ảnh chụp chân dung' }));
@@ -293,6 +301,15 @@ try {
   check(
     priceRange.data.recommendations.every(item => item.price > 500000 && item.price < 700000),
     'Trợ lý lọc đúng khoảng giá'
+  );
+  const emptyChecklists = await query(
+    `SELECT COUNT(*)::INT AS count FROM products WHERE cardinality(included_items)=0 AND slug NOT LIKE 'workflow-%'`
+  );
+  check(
+    emptyChecklists.rows[0].count === 0,
+    'Mọi sản phẩm đều có bộ phụ kiện để lập checklist',
+    '',
+    `${emptyChecklists.rows[0].count} sản phẩm thiếu checklist`
   );
   const guestDetail = await ok(`/products/${slugs.camera}`);
   check(guestDetail.data.product.included.includes('Pin'), 'Khách vãng lai xem được chi tiết và bộ phụ kiện');
@@ -346,7 +363,7 @@ try {
   const staff2 = (await ok('/auth/login', json('POST', { email: emails.staff2, password }))).cookie;
   await expectStatus(403, 'Nhân viên giao nhận không vào được quản trị', '/admin/products', {}, staff1);
 
-  /* ---------------- Đặt thuê nhiều thiết bị và chống trùng lịch ---------------- */
+  group = 'Đặt thuê nhiều thiết bị và chống trùng lịch';
   const r1 = (await ok('/rentals', json('POST', rentalBody([slugs.camera, slugs.lens], today, day(5))), a)).data.rental;
   check(
     r1.items.length === 2 && r1.rentalFee === 150000 * 6 && r1.deposit === 1500000,
@@ -395,7 +412,7 @@ try {
   ).data.rental;
   check(Boolean(r2.id), 'Khách B đặt được lịch kế tiếp sau ngày đệm');
 
-  /* ---------------- Thanh toán và duyệt đơn ---------------- */
+  group = 'Thanh toán và duyệt đơn';
   await expectStatus(
     409,
     'Không duyệt đơn online khi khách chưa thanh toán',
@@ -430,7 +447,7 @@ try {
     admin
   );
 
-  /* ---------------- Gia hạn (mục 6.4) ---------------- */
+  group = 'Gia hạn (mục 6.4)';
   await query('UPDATE rentals SET end_date=$2 WHERE id=$1', [r1.id, day(2)]);
   await expectStatus(
     409,
@@ -470,7 +487,7 @@ try {
   const approved = await ok(`/admin/extensions/${extensionId}`, json('PATCH', { status: 'APPROVED' }), admin);
   check(approved.data.extraAmount === 300000, 'Duyệt gia hạn và tính phí 2 ngày × 150.000đ');
 
-  /* ---------------- Giao nhận tận nơi ---------------- */
+  group = 'Giao nhận tận nơi';
   const staffList = await ok('/admin/delivery-staff', {}, admin);
   await ok(
     `/admin/rentals/${r1.id}/assignment`,
@@ -560,7 +577,7 @@ try {
   );
   check(future.data.available === true, 'Thiết bị đang cho thuê vẫn nhận đặt cho ngày trống trong tương lai');
 
-  /* ---------------- Thu hồi trễ hạn, sự cố và quyết toán cọc ---------------- */
+  group = 'Thu hồi trễ hạn, sự cố và quyết toán cọc';
   await ok(`/delivery/tasks/${r1.id}/status`, json('PATCH', { status: 'RETURNING' }), staff1);
   await query('UPDATE rentals SET start_date=$2,end_date=$3 WHERE id=$1', [r1.id, day(-4), day(-2)]);
   const dashboardOverdue = await ok('/admin/dashboard?range=30', {}, admin);
@@ -635,7 +652,7 @@ try {
   );
   check((await equipmentStatus(slugs.camera)) === 'AVAILABLE', 'Thiết bị trở lại kho sau xử lý sự cố');
 
-  /* ---------------- Đánh giá sau thuê ---------------- */
+  group = 'Đánh giá sau thuê';
   const reviewPath = `/products/${slugs.camera}/reviews`;
   await expectStatus(
     401,
@@ -657,7 +674,7 @@ try {
     a
   );
 
-  /* ---------------- Hủy đơn và hết hạn giữ lịch ---------------- */
+  group = 'Hủy đơn và hết hạn giữ lịch';
   await expectStatus(
     404,
     'Khách không hủy được đơn của người khác',
@@ -683,7 +700,7 @@ try {
     'Khách nhận thông báo đơn hết hạn'
   );
 
-  /* ---------------- Nhận và trả tại cửa hàng ---------------- */
+  group = 'Nhận và trả tại cửa hàng';
   const r4 = (
     await ok(
       '/rentals',
@@ -731,7 +748,7 @@ try {
     'Trả máy đúng hạn, hoàn đủ cọc'
   );
 
-  /* ---------------- Bảo trì thiết bị có đơn sắp tới ---------------- */
+  group = 'Bảo trì thiết bị có đơn sắp tới';
   const r5 = (
     await ok(
       '/rentals',
@@ -770,7 +787,7 @@ try {
   await ok(`/admin/equipment/${unit.rows[0].id}`, json('PATCH', { status: 'AVAILABLE', condition: 'GOOD' }), admin);
   check((await equipmentStatus(slugs.camera)) === 'RESERVED', 'Thiết bị trở lại kho và giữ chỗ cho đơn đã xác nhận');
 
-  /* ---------------- Email và SMS ---------------- */
+  group = 'Email và SMS';
   const deliveries = (rentalId, channel) =>
     query(
       `SELECT d.* FROM notification_deliveries d JOIN notifications n ON n.id=d.notification_id
@@ -852,7 +869,7 @@ try {
   );
   await expectStatus(403, 'Khách không xem được nhật ký gửi', '/admin/notification-deliveries', {}, a);
 
-  /* ---------------- Xác minh CCCD ---------------- */
+  group = 'Xác minh CCCD';
   const idNumber = String(stamp).padStart(12, '0').slice(-12),
     otherIdNumber = String(stamp + 1)
       .padStart(12, '0')
@@ -986,7 +1003,274 @@ try {
     'Khách rút hồ sơ thì dữ liệu bị xóa'
   );
 
-  /* ---------------- Dashboard và kết thúc ---------------- */
+  group = 'Kịch bản đầu cuối bắt buộc';
+  const flow = async (rentalId, cookie = staff1) => {
+    await ok(
+      `/admin/rentals/${rentalId}/assignment`,
+      json('PATCH', { staffId: staffList.data.staff.find(item => item.email === 'giaonhan@trammayanh.vn').id }),
+      admin
+    );
+    await ok(`/delivery/tasks/${rentalId}/status`, json('PATCH', { status: 'DELIVERING' }), cookie);
+    const items = (await ok(`/delivery/tasks/${rentalId}`, {}, cookie)).data.task.items;
+    await ok(
+      `/delivery/tasks/${rentalId}/status`,
+      json('PATCH', { status: 'RENTING', images: [image], items: fullChecklist(items) }),
+      cookie
+    );
+    await ok(`/delivery/tasks/${rentalId}/status`, json('PATCH', { status: 'RETURNING' }), cookie);
+    return items;
+  };
+
+  // E2E-01: đặt, thanh toán, giao có ảnh, thu hồi bình thường, hoàn tất.
+  const e1 = (await ok('/rentals', json('POST', rentalBody([slugs.pricey], today, day(1))), a)).data.rental;
+  const e1Paid = await ok(`/rentals/${e1.id}/payment`, json('POST', {}), a);
+  check(
+    Boolean(e1Paid.data.rental.invoiceCode),
+    'E2E-01: thanh toán thành công và nhận hóa đơn',
+    '',
+    `Hóa đơn ${e1Paid.data.rental.invoiceCode}`
+  );
+  await ok(`/admin/rentals/${e1.id}/status`, json('PATCH', { status: 'CONFIRMED' }), admin);
+  const e1Items = await flow(e1.id);
+  const e1Done = await ok(
+    `/delivery/tasks/${e1.id}/status`,
+    json('PATCH', { status: 'RETURNED', images: [image], items: fullChecklist(e1Items) }),
+    staff1
+  );
+  check(
+    e1Done.data.status === 'COMPLETED' && e1Done.data.settlement.refund === 6000000,
+    'E2E-01: thu hồi bình thường, đơn hoàn tất và hoàn đủ cọc',
+    '',
+    `Trạng thái ${e1Done.data.status}, hoàn ${e1Done.data.settlement.refund}đ`
+  );
+
+  // E2E-02: nhiều khách đặt đồng thời cùng thiết bị và cùng thời gian.
+  const racing = await Promise.all(
+    Array.from({ length: 8 }, (_, index) =>
+      request(
+        '/rentals',
+        json(
+          'POST',
+          rentalBody([slugs.lens], day(80), day(81), { paymentMethod: 'handover', deliveryMethod: 'store' })
+        ),
+        index % 2 ? a : b
+      )
+    )
+  );
+  const accepted = racing.filter(item => item.status === 201),
+    rejected = racing.filter(item => item.status === 409);
+  check(
+    accepted.length === 1 && rejected.length === 7,
+    'E2E-02: 8 yêu cầu đồng thời cùng thiết bị chỉ có 1 đơn được chấp nhận',
+    '',
+    `${accepted.length} đơn HTTP 201, ${rejected.length} đơn HTTP 409`
+  );
+
+  // E2E-03: gia hạn trước 4 ngày, không có lịch kế tiếp, cập nhật tổng tiền.
+  const e3 = (
+    await ok(
+      '/rentals',
+      json('POST', rentalBody([slugs.camera], day(1), day(4), { paymentMethod: 'handover', deliveryMethod: 'store' })),
+      a
+    )
+  ).data.rental;
+  await ok(`/admin/rentals/${e3.id}/status`, json('PATCH', { status: 'CONFIRMED' }), admin);
+  const e3Ext = (await ok(`/account/rentals/${e3.id}/extensions`, json('POST', { requestedEndDate: day(6) }), a)).data
+    .id;
+  await ok(`/admin/extensions/${e3Ext}`, json('PATCH', { status: 'APPROVED' }), admin);
+  const e3Row = await rentalRow(e3.id);
+  check(
+    e3Row.end_date === day(6) && e3Row.total_amount === e3.total + 200000,
+    'E2E-03: gia hạn trước 4 ngày được duyệt và cập nhật tổng tiền',
+    '',
+    `Ngày trả ${e3Row.end_date}, tổng ${e3Row.total_amount}đ (tăng 200.000đ)`
+  );
+  await ok(`/admin/rentals/${e3.id}/status`, json('PATCH', { status: 'CANCELLED', note: 'Kết thúc ca E2E-03' }), admin);
+
+  // E2E-06: hư hỏng, khấu trừ một phần cọc, chuyển bảo trì.
+  const e6 = (
+    await ok('/rentals', json('POST', rentalBody([slugs.camera], today, day(1), { paymentMethod: 'handover' })), a)
+  ).data.rental;
+  await ok(`/admin/rentals/${e6.id}/status`, json('PATCH', { status: 'CONFIRMED' }), admin);
+  const e6Items = await flow(e6.id);
+  const e6Returned = await ok(
+    `/delivery/tasks/${e6.id}/status`,
+    json('PATCH', {
+      status: 'RETURNED',
+      images: [image],
+      note: 'Nứt màn hình LCD',
+      items: fullChecklist(e6Items, { [slugs.camera]: { condition: 'DAMAGED' } })
+    }),
+    staff1
+  );
+  check(
+    e6Returned.data.status === 'INSPECTING',
+    'E2E-06: phát hiện hư hỏng, đơn chuyển sang kiểm tra',
+    '',
+    `Trạng thái ${e6Returned.data.status}`
+  );
+  const e6Incident = (await ok('/admin/incidents', {}, admin)).data.incidents.find(item => item.rentalId === e6.id);
+  const e6Resolved = await ok(
+    `/admin/incidents/${e6Incident.id}`,
+    json('PATCH', { resolution: 'Thay màn hình LCD', feeAmount: 400000, equipmentOutcome: 'MAINTENANCE' }),
+    admin
+  );
+  check(
+    e6Resolved.data.settlement.deducted === 400000 &&
+      e6Resolved.data.settlement.refund === 600000 &&
+      (await equipmentStatus(slugs.camera)) === 'MAINTENANCE',
+    'E2E-06: khấu trừ một phần cọc và chuyển thiết bị sang bảo trì',
+    '',
+    `Trừ ${e6Resolved.data.settlement.deducted}đ, hoàn ${e6Resolved.data.settlement.refund}đ, thiết bị MAINTENANCE`
+  );
+  const unitId = (
+    await query(`SELECT e.id FROM equipment_items e JOIN products p ON p.id=e.product_id WHERE p.slug=$1`, [
+      slugs.camera
+    ])
+  ).rows[0].id;
+  await ok(`/admin/equipment/${unitId}`, json('PATCH', { status: 'AVAILABLE', condition: 'GOOD' }), admin);
+
+  // Phí vượt cọc: ghi phần chênh lệch còn phải trả, không tự trừ thêm.
+  const over = (
+    await ok('/rentals', json('POST', rentalBody([slugs.camera], today, day(1), { paymentMethod: 'handover' })), b)
+  ).data.rental;
+  await ok(`/admin/rentals/${over.id}/status`, json('PATCH', { status: 'CONFIRMED' }), admin);
+  const overItems = await flow(over.id);
+  await ok(
+    `/delivery/tasks/${over.id}/status`,
+    json('PATCH', {
+      status: 'RETURNED',
+      images: [image],
+      note: 'Vỡ ngàm máy',
+      items: fullChecklist(overItems, { [slugs.camera]: { condition: 'DAMAGED' } })
+    }),
+    staff1
+  );
+  const overIncident = (await ok('/admin/incidents', {}, admin)).data.incidents.find(item => item.rentalId === over.id);
+  const overResolved = await ok(
+    `/admin/incidents/${overIncident.id}`,
+    json('PATCH', { resolution: 'Thay ngàm máy', feeAmount: 1300000, equipmentOutcome: 'AVAILABLE' }),
+    admin
+  );
+  check(
+    overResolved.data.settlement.shortfall === 300000,
+    'Thiệt hại vượt cọc: ghi phần chênh lệch khách còn phải trả',
+    '',
+    `Cọc 1.000.000đ, phí 1.300.000đ, còn phải trả ${overResolved.data.settlement.shortfall}đ`
+  );
+  const shortfall = (
+    await query(`SELECT id FROM extra_charges WHERE rental_id=$1 AND charge_type='DEPOSIT_SHORTFALL'`, [over.id])
+  ).rows[0];
+  await ok(`/account/charges/${shortfall.id}/payment`, { method: 'POST' }, b);
+  check(
+    (await query(`SELECT 1 FROM invoices WHERE extra_charge_id=$1 AND invoice_type='EXTRA_CHARGE'`, [shortfall.id]))
+      .rowCount === 1,
+    'Thanh toán phần vượt cọc tạo hóa đơn phí phát sinh riêng'
+  );
+
+  // E2E-09: thanh toán thất bại, không tạo hóa đơn, thử lại được.
+  const e9 = (await ok('/rentals', json('POST', rentalBody([slugs.lens], day(90), day(91))), a)).data.rental;
+  await expectStatus(
+    402,
+    'E2E-09: thanh toán mô phỏng thất bại được báo cho khách',
+    `/rentals/${e9.id}/payment`,
+    json('POST', { simulateFailure: true }),
+    a
+  );
+  const e9Invoices = await query('SELECT 1 FROM invoices WHERE rental_id=$1', [e9.id]);
+  check(
+    e9Invoices.rowCount === 0 && (await rentalRow(e9.id)).payment_status === 'PENDING',
+    'E2E-09: thất bại không tạo hóa đơn và đơn vẫn chờ thanh toán',
+    '',
+    '0 hóa đơn, thanh toán PENDING'
+  );
+  const e9Retry = await ok(`/rentals/${e9.id}/payment`, json('POST', {}), a);
+  check(
+    e9Retry.data.rental.paymentStatus === 'PAID_SIMULATED',
+    'E2E-09: thử lại thành công khi giữ lịch còn hạn',
+    '',
+    `Thanh toán ${e9Retry.data.rental.paymentStatus}`
+  );
+
+  // E2E-10: số liệu Dashboard khớp dữ liệu.
+  const dash = (await ok('/admin/dashboard?range=30', {}, admin)).data;
+  const truth = (
+    await query(
+      `SELECT
+      (SELECT COUNT(*)::INT FROM rentals WHERE status='PENDING') AS pending,
+      (SELECT COUNT(*)::INT FROM rentals WHERE status IN ('RENTING','RETURNING') AND end_date < $1::DATE) AS overdue,
+      (SELECT COUNT(*)::INT FROM rentals WHERE status IN ('RENTING','RETURNING')) AS active,
+      (SELECT COUNT(*)::INT FROM equipment_items WHERE status='AVAILABLE') AS available,
+      (SELECT COALESCE(SUM(p.amount),0)::INT FROM payments p WHERE p.status='PAID_SIMULATED' AND (p.paid_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE BETWEEN $2::DATE AND $1::DATE) AS revenue`,
+      [today, day(-29)]
+    )
+  ).rows[0];
+  const shown = {
+    pending: dash.operations.counts.pending,
+    overdue: dash.operations.counts.overdue,
+    active: dash.operations.counts.activeRentals,
+    available: dash.inventory.byStatus.AVAILABLE,
+    revenue: dash.revenue.rentalRevenue
+  };
+  check(
+    Object.keys(truth).every(key => Number(truth[key]) === Number(shown[key])),
+    'E2E-10: số liệu Dashboard khớp dữ liệu đơn, thiết bị và doanh thu',
+    JSON.stringify({ truth, shown }),
+    `Chờ duyệt ${shown.pending}, quá hạn ${shown.overdue}, đang thuê ${shown.active}, kho sẵn sàng ${shown.available}, doanh thu thuê ${shown.revenue}đ`
+  );
+
+  group = 'Bảo mật cơ bản';
+  const injected = await ok(`/admin/rentals?q=${encodeURIComponent("' OR 1=1 --")}`, {}, admin);
+  check(
+    injected.data.total === 0,
+    'Chuỗi SQL injection trong ô tìm kiếm không trả về dữ liệu',
+    '',
+    `HTTP 200, ${injected.data.total} kết quả`
+  );
+  await expectStatus(
+    404,
+    'Mã đơn sai định dạng trả về 404, không lộ lỗi hệ thống',
+    '/account/rentals/khong-phai-uuid',
+    {},
+    a
+  );
+  await expectStatus(
+    413,
+    'Từ chối dữ liệu gửi lên quá lớn',
+    '/auth/login',
+    json('POST', { email: 'x@example.com', password: 'x'.repeat(300000) })
+  );
+  const fresh = await fetch(`${base}/auth/login`, {
+    ...json('POST', { email: emails.staff2, password }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+  const setCookie = fresh.headers.get('set-cookie') || '',
+    loginBody = await fresh.json();
+  check(
+    /HttpOnly/i.test(setCookie) && /SameSite=Lax/i.test(setCookie),
+    'Cookie phiên có HttpOnly và SameSite=Lax',
+    '',
+    setCookie.replace(/session=[^;]+/, 'session=***')
+  );
+  check(!JSON.stringify(loginBody).match(/password|salt|hash/i), 'API đăng nhập không trả về mật khẩu hoặc mã băm');
+  const storedUser = (await query('SELECT password_hash FROM users WHERE email=$1', [emails.a])).rows[0];
+  check(
+    storedUser.password_hash.length === 128 && storedUser.password_hash !== password,
+    'Mật khẩu lưu dưới dạng băm scrypt',
+    '',
+    'Mã băm 128 ký tự hex'
+  );
+  const headers = (await fetch(`${base}/products?limit=1`)).headers;
+  check(
+    headers.get('x-content-type-options') === 'nosniff' &&
+      headers.get('x-frame-options') === 'DENY' &&
+      !headers.get('x-powered-by'),
+    'Có security header và ẩn công nghệ máy chủ',
+    '',
+    'nosniff, DENY, không có X-Powered-By'
+  );
+
+  group = 'Dashboard và kết thúc';
   const dashboard = await ok('/admin/dashboard?range=30', {}, admin);
   check(
     dashboard.data.series.length === 30 && dashboard.data.revenue.rentalRevenue >= 900000 + 50000 * 2,
@@ -1006,6 +1290,8 @@ try {
   await expectStatus(401, 'Phiên hết hiệu lực sau đăng xuất', '/auth/me', {}, a);
   for (const cookie of [b, admin, staff1, staff2]) await ok('/auth/logout', { method: 'POST' }, cookie);
 
+  if (process.env.WORKFLOW_REPORT)
+    fs.writeFileSync(process.env.WORKFLOW_REPORT, JSON.stringify({ ranAt: new Date().toISOString(), cases }, null, 2));
   console.log(`\n✓ ${results.length}/${results.length} kiểm tra đã vượt qua:`);
   for (const item of results) console.log(`  ✓ ${item}`);
 } catch (error) {

@@ -6,7 +6,27 @@ import { api } from '../api';
 import '../styles/chatWidget.css';
 
 const money = value => new Intl.NumberFormat('vi-VN').format(value) + 'đ/ngày';
-const suggestions = ['Máy ảnh đi du lịch', 'Quay vlog dưới 500k/ngày', 'Ống kính chụp chân dung'];
+const suggestions = [
+  'Cuối tuần này đi Đà Lạt, cần máy ảnh nhẹ dưới 600k/ngày',
+  'Quay vlog dưới 500k/ngày',
+  'Ống kính chụp chân dung'
+];
+// AI có thể trả lời với **chữ đậm** kiểu Markdown: hiển thị thành <strong>, phần còn lại giữ nguyên văn bản.
+const renderText = text =>
+  String(text || '')
+    .split(/(\*\*[^*]+\*\*)/g)
+    .map((part, index) =>
+      /^\*\*[^*]+\*\*$/.test(part) ? <strong key={index}>{part.slice(2, -2)}</strong> : part.replace(/^\* /gm, '• ')
+    );
+const TOOL_LABELS = {
+  tim_thiet_bi: 'tìm trong kho',
+  kiem_tra_lich_va_gia: 'kiểm tra lịch trống và giá',
+  thiet_bi_thue_kem: 'xem thiết bị thường thuê kèm'
+};
+const stepsLabel = steps => {
+  const names = [...new Set((steps || []).map(step => TOOL_LABELS[step.tool]).filter(Boolean))];
+  return names.length ? `AI đã ${names.join(', ')}` : null;
+};
 
 export default function ChatWidget() {
   const location = useLocation();
@@ -21,14 +41,21 @@ export default function ChatWidget() {
   const send = async suggested => {
     const text = String(suggested || draft).trim();
     if (!text || busy) return;
+    const history = messages.slice(1).map(item => ({ role: item.role, text: item.text }));
     setMessages(current => [...current, { role: 'user', text }]);
     setDraft('');
     setBusy(true);
     try {
-      const result = await api.recommend(text);
+      const result = await api.recommend(text, history);
       setMessages(current => [
         ...current,
-        { role: 'assistant', text: result.answer, recommendations: result.recommendations, notice: result.aiNotice }
+        {
+          role: 'assistant',
+          text: result.answer,
+          recommendations: result.recommendations,
+          notice: result.aiNotice,
+          steps: stepsLabel(result.steps)
+        }
       ]);
     } catch (error) {
       setMessages(current => [
@@ -47,14 +74,15 @@ export default function ChatWidget() {
           <header>
             <div>
               <strong>Trợ lý tìm thiết bị</strong>
-              <small>Gợi ý theo sản phẩm tại Trạm</small>
+              <small>AI tra cứu kho, lịch trống và giá thật</small>
             </div>
             <Button type="text" icon={<CloseOutlined />} aria-label="Đóng hộp chat" onClick={() => setOpen(false)} />
           </header>
           <div className="chat-messages" role="log" aria-live="polite">
             {messages.map((item, index) => (
               <div className={`chat-message ${item.role}`} key={index}>
-                <Typography.Paragraph>{item.text}</Typography.Paragraph>
+                <Typography.Paragraph style={{ whiteSpace: 'pre-line' }}>{renderText(item.text)}</Typography.Paragraph>
+                {item.steps && <Typography.Text className="chat-steps">{item.steps}</Typography.Text>}
                 {item.notice && <Typography.Text className="chat-service-notice">{item.notice}</Typography.Text>}
                 {item.recommendations?.map(product => (
                   <Link
@@ -75,7 +103,7 @@ export default function ChatWidget() {
             ))}
             {busy && (
               <div className="chat-message assistant">
-                <Typography.Text>Đang tìm thiết bị phù hợp…</Typography.Text>
+                <Typography.Text>Đang tra cứu kho và lịch trống…</Typography.Text>
               </div>
             )}
           </div>

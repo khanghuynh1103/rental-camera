@@ -317,13 +317,16 @@ export async function createRental({
   }
 }
 
-export async function payRental(rentalId, userId) {
+export async function payRental(rentalId, userId, { simulateFailure = false } = {}) {
   return withTransaction(async client => {
     const rental = await lockRental(client, rentalId, { userId });
     if (!['PENDING', 'CONFIRMED'].includes(rental.status))
       throw httpError(409, 'Đơn thuê này không còn ở trạng thái có thể thanh toán.');
     if (rental.payment_method !== 'online') throw httpError(409, 'Đơn này thanh toán trực tiếp khi bàn giao thiết bị.');
     if (rental.payment_status === PAID) throw httpError(409, 'Đơn thuê này đã được thanh toán.');
+    // Mô phỏng cổng thanh toán từ chối: không ghi nhận tiền, không tạo hóa đơn, đơn vẫn giữ lịch để khách thử lại.
+    if (simulateFailure)
+      throw httpError(402, 'Giao dịch mô phỏng thất bại. Bạn có thể thử lại trong thời gian giữ lịch.');
     const paid = await client.query(
       `UPDATE payments SET status=$1,paid_at=NOW() WHERE rental_id=$2 RETURNING paid_at,amount`,
       [PAID, rental.id]
