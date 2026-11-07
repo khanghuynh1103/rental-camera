@@ -1,0 +1,10 @@
+# Vercel CLI không đọc .gitignore: loại các thư mục cục bộ, bí mật và file build khỏi lần tải lên.
+.env
+.env.*
+!.env.example
+bao-cao
+backups
+dist
+node_modules
+.vercel
+*.log
