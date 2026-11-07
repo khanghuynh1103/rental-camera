@@ -1,5 +1,6 @@
 import { pool, query, testDatabaseConnection } from './db.js';
 import { products } from './products.js';
+import { DEFAULT_INCLUDED_ITEMS } from './rules.js';
 
 const categoryNames = {
   camera: 'Máy ảnh',
@@ -80,6 +81,15 @@ try {
         [productId, equipmentCode, 'GOOD', 'AVAILABLE']
       );
     }
+  }
+
+  // Sản phẩm vừa nạp cần có bộ phụ kiện để dùng làm checklist bàn giao và thu hồi.
+  for (const [slug, items] of Object.entries(DEFAULT_INCLUDED_ITEMS)) {
+    await query(
+      `UPDATE products p SET included_items=$2 FROM categories c
+       WHERE c.id=p.category_id AND c.slug=$1 AND cardinality(p.included_items)=0`,
+      [slug, items]
+    );
   }
 
   const counts = await query(

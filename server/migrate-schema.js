@@ -2,7 +2,7 @@
 // Có thể chạy lại nhiều lần (IF NOT EXISTS, kiểm tra trước khi thêm ràng buộc).
 import { pathToFileURL } from 'node:url';
 import { pool, query, testDatabaseConnection } from './db.js';
-import { BLOCKING_RENTAL_STATUSES, RULES, SMS_KINDS } from './rules.js';
+import { BLOCKING_RENTAL_STATUSES, DEFAULT_INCLUDED_ITEMS, RULES, SMS_KINDS } from './rules.js';
 
 const blocking = BLOCKING_RENTAL_STATUSES.map(status => `'${status}'`).join(',');
 const smsKinds = SMS_KINDS.map(kind => `'${kind}'`).join(',');
@@ -280,16 +280,6 @@ const indexes = [
   `CREATE UNIQUE INDEX IF NOT EXISTS uq_invoice_charge ON invoices(extra_charge_id) WHERE extra_charge_id IS NOT NULL`
 ];
 
-const defaultIncluded = {
-  camera: ['Thân máy', 'Pin', 'Bộ sạc', 'Dây đeo', 'Túi bảo vệ'],
-  lens: ['Ống kính', 'Nắp trước', 'Nắp sau', 'Hood che sáng', 'Túi bảo vệ'],
-  video: ['Thiết bị chính', 'Pin', 'Bộ sạc', 'Phụ kiện lắp đặt', 'Túi bảo vệ'],
-  audio: ['Thiết bị chính', 'Cáp kết nối', 'Pin hoặc bộ sạc', 'Túi bảo vệ'],
-  light: ['Thân đèn', 'Nguồn và dây điện', 'Chóa tiêu chuẩn', 'Túi bảo vệ'],
-  flash: ['Đèn flash', 'Pin hoặc bộ sạc', 'Chân đế', 'Túi bảo vệ'],
-  accessory: ['Thiết bị chính', 'Đầu nối', 'Phụ kiện cố định', 'Túi vận chuyển']
-};
-
 async function migrateLegacyProofImages() {
   // Ảnh bằng chứng cũ lưu dạng data URL trong delivery_logs.proof_image -> chuyển sang evidence_images (BYTEA).
   const moved = await query(`
@@ -332,7 +322,7 @@ export async function migrate({ log = console.log } = {}) {
   for (const statement of [...tables, ...upgrades, ...addStatusChecks, ...functions, ...indexes])
     await query(statement);
 
-  for (const [slug, items] of Object.entries(defaultIncluded)) {
+  for (const [slug, items] of Object.entries(DEFAULT_INCLUDED_ITEMS)) {
     await query(
       `UPDATE products p SET included_items=$2 FROM categories c
       WHERE c.id=p.category_id AND c.slug=$1 AND cardinality(p.included_items)=0`,

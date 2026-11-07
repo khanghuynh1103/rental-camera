@@ -68,11 +68,12 @@ Website thuê máy ảnh và thiết bị quay chụp, xây dựng bằng React,
    ```dotenv
    DATABASE_URL=postgresql://postgres:your_password@localhost:5432/tram_may_anh
    PORT=3000
-   OPENAI_API_KEY=
-   OPENAI_MODEL=gpt-4.1-mini
+   AI_BASE_URL=
+   AI_API_KEY=
+   AI_MODEL=
    ```
 
-   `OPENAI_API_KEY` là tùy chọn. Không có khóa này, tính năng chat vẫn gợi ý sản phẩm dựa trên dữ liệu trong PostgreSQL.
+   Trợ lý AI là tùy chọn và dùng được mọi API tương thích OpenAI (Gemini, Groq, OpenRouter, Ollama, OpenAI); xem ví dụ trong `.env.example`. Không cấu hình AI, tính năng chat vẫn gợi ý sản phẩm bằng luật lọc trên dữ liệu PostgreSQL.
 
 5. Khởi tạo schema và dữ liệu mẫu theo hướng dẫn [Khởi tạo cơ sở dữ liệu](#khởi-tạo-cơ-sở-dữ-liệu) bên dưới.
 
@@ -137,6 +138,8 @@ Bản demo công khai không nên nhận CCCD thật. Khi vận hành thật, c�
 | `npm run check` | Kiểm tra mã nguồn bằng ESLint. |
 | `npm test` / `npm run test:unit` | Unit test quy tắc nghiệp vụ (`server/tests`), không cần database. |
 | `npm run test:workflow` | Kiểm thử tích hợp toàn bộ vòng đời đơn thuê qua API + PostgreSQL. |
+| `npm run test:perf` | Đo thời gian phản hồi các API chính với dữ liệu mẫu lớn. |
+| `npm run format` | Định dạng mã nguồn bằng Prettier. |
 | `npm run setup` | Khởi tạo database trống: schema, sản phẩm, tài khoản mẫu. |
 | `npm run migrate` | Tạo/nâng cấp schema (an toàn khi chạy lại). |
 | `npm run migrate:products` | Nhập/cập nhật danh mục, sản phẩm, ảnh và thiết bị kho. |

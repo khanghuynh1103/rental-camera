@@ -155,7 +155,7 @@ router.post('/rentals', requireAuth, requireRole('CUSTOMER'), async (req, res) =
 });
 
 router.post('/rentals/:id/payment', requireAuth, requireRole('CUSTOMER'), async (req, res) => {
-  const rental = await payRental(req.params.id, req.user.id);
+  const rental = await payRental(req.params.id, req.user.id, { simulateFailure: req.body?.simulateFailure === true });
   res.json({ message: 'Thanh toán mô phỏng thành công.', rental });
 });
 

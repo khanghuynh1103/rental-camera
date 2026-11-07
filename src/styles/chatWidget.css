@@ -131,3 +131,12 @@
   font-size: 0.76rem;
   line-height: 1.45;
 }
+.chat-steps.ant-typography {
+  margin-top: 6px;
+  display: block;
+  color: #7a5d4b;
+  font-size: 0.72rem;
+}
+.chat-steps.ant-typography::before {
+  content: '⚙ ';
+}

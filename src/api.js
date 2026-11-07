@@ -30,12 +30,14 @@ export const api = {
   productReviews: id => request(`/api/products/${id}/reviews`),
   createReview: (id, values) =>
     request(`/api/products/${id}/reviews`, { method: 'POST', body: JSON.stringify(values) }),
-  recommend: message => request('/api/chat/recommend', { method: 'POST', body: JSON.stringify({ message }) }),
+  recommend: (message, history = []) =>
+    request('/api/chat/recommend', { method: 'POST', body: JSON.stringify({ message, history }) }),
   productCalendar: (id, params = {}) => request(`/api/products/${id}/calendar?${new URLSearchParams(params)}`),
   availability: (id, dates) =>
     request(`/api/products/${id}/availability`, { method: 'POST', body: JSON.stringify(dates) }),
   createRental: values => request('/api/rentals', { method: 'POST', body: JSON.stringify(values) }),
-  completePayment: id => request(`/api/rentals/${id}/payment`, { method: 'POST' }),
+  completePayment: (id, options = {}) =>
+    request(`/api/rentals/${id}/payment`, { method: 'POST', body: JSON.stringify(options) }),
   me: () => request('/api/auth/me'),
   login: credentials => request('/api/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
   register: values => request('/api/auth/register', { method: 'POST', body: JSON.stringify(values) }),

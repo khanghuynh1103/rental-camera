@@ -155,6 +155,17 @@ export default function Booking() {
       setSending(false);
     }
   };
+  const failPayment = async () => {
+    setSending(true);
+    setError('');
+    try {
+      await api.completePayment(order.id, { simulateFailure: true });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSending(false);
+    }
+  };
   const completePayment = async () => {
     setSending(true);
     setError('');
@@ -488,6 +499,9 @@ export default function Booking() {
               </div>
               <UiButton className="gateway-button" disabled={sending} onClick={completePayment}>
                 {sending ? 'Đang xử lý…' : 'Mô phỏng thanh toán thành công'}
+              </UiButton>
+              <UiButton className="secondary" disabled={sending} onClick={failPayment}>
+                Mô phỏng thanh toán thất bại
               </UiButton>
             </div>
             <p className="booking-error">{error}</p>

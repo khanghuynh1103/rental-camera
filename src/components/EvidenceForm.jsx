@@ -28,6 +28,7 @@ export default function EvidenceForm({ mode, items, collectAmount = 0, submitLab
     const files = [...(event.target.files || [])].slice(0, MAX_IMAGES - images.length);
     event.target.value = '';
     if (!files.length) return;
+    setError('');
     setProcessing(true);
     try {
       const compressed = [];
@@ -40,7 +41,8 @@ export default function EvidenceForm({ mode, items, collectAmount = 0, submitLab
     }
   };
 
-  const toggleItem = (itemId, name) =>
+  const toggleItem = (itemId, name) => {
+    setError('');
     setChecklist(current => {
       const entry = current[itemId];
       const missing = entry.missing.includes(name)
@@ -48,6 +50,7 @@ export default function EvidenceForm({ mode, items, collectAmount = 0, submitLab
         : [...entry.missing, name];
       return { ...current, [itemId]: { ...entry, missing } };
     });
+  };
   const setCondition = (itemId, condition) =>
     setChecklist(current => ({ ...current, [itemId]: { ...current[itemId], condition } }));
 
@@ -157,7 +160,10 @@ export default function EvidenceForm({ mode, items, collectAmount = 0, submitLab
         Ghi chú {returning && hasIssue ? '*' : ''}
         <Input.TextArea
           value={note}
-          onChange={event => setNote(event.target.value)}
+          onChange={event => {
+            setError('');
+            setNote(event.target.value);
+          }}
           placeholder={
             returning ? 'Mô tả vết trầy, hư hỏng hoặc phụ kiện bị thiếu' : 'Ghi chú khi bàn giao (không bắt buộc)'
           }

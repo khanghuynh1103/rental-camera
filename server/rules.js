@@ -34,6 +34,17 @@ export const SMS_KINDS = [
 ];
 export const MAX_DELIVERY_ATTEMPTS = 5;
 
+/** Bộ phụ kiện mặc định theo danh mục, dùng làm checklist khi bàn giao và thu hồi. */
+export const DEFAULT_INCLUDED_ITEMS = {
+  camera: ['Thân máy', 'Pin', 'Bộ sạc', 'Dây đeo', 'Túi bảo vệ'],
+  lens: ['Ống kính', 'Nắp trước', 'Nắp sau', 'Hood che sáng', 'Túi bảo vệ'],
+  video: ['Thiết bị chính', 'Pin', 'Bộ sạc', 'Phụ kiện lắp đặt', 'Túi bảo vệ'],
+  audio: ['Thiết bị chính', 'Cáp kết nối', 'Pin hoặc bộ sạc', 'Túi bảo vệ'],
+  light: ['Thân đèn', 'Nguồn và dây điện', 'Chóa tiêu chuẩn', 'Túi bảo vệ'],
+  flash: ['Đèn flash', 'Pin hoặc bộ sạc', 'Chân đế', 'Túi bảo vệ'],
+  accessory: ['Thiết bị chính', 'Đầu nối', 'Phụ kiện cố định', 'Túi vận chuyển']
+};
+
 /** Trạng thái đơn còn giữ lịch thiết bị. */
 export const BLOCKING_RENTAL_STATUSES = ['PENDING', 'CONFIRMED', 'DELIVERING', 'RENTING', 'RETURNING'];
 /** Trạng thái thiết bị không được nhận đơn mới. */
