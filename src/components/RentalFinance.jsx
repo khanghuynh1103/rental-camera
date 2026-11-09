@@ -17,7 +17,7 @@ export default function RentalFinance({ rental, onPayCharge }) {
           <small>Tiền thuê</small>
           <b>{money(rental.rentalFee)}</b>
           <span>
-            {payment.method === 'online' ? 'Online mô phỏng' : 'Khi bàn giao'} ·{' '}
+            {payment.method === 'online' ? 'Online' : 'Khi bàn giao'} ·{' '}
             {paymentStatusLabels[payment.status] || payment.status}
           </span>
         </div>

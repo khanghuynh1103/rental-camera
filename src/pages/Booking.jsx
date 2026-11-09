@@ -385,7 +385,7 @@ export default function Booking() {
         <Stage
           eyebrow="BƯỚC 3 · XÁC NHẬN & THANH TOÁN"
           title="Kiểm tra và chọn thanh toán."
-          text="Các giao dịch trên website hiện là mô phỏng và không phát sinh tiền thật."
+          text="Các giao dịch trên website không phát sinh tiền thật."
           summary={summary}
         >
           <div className="booking-panel review">
@@ -408,7 +408,7 @@ export default function Booking() {
                 <PaymentChoice
                   active={paymentMethod === 'online'}
                   icon="QR"
-                  title="Thanh toán online mô phỏng"
+                  title="Thanh toán online"
                   text="Thanh toán tiền thuê ngay để giữ lịch (trong 30 phút)"
                   onClick={() => setPaymentMethod('online')}
                 />
@@ -422,7 +422,7 @@ export default function Booking() {
               </div>
               <div className="payment-detail">
                 <strong>
-                  {paymentMethod === 'online' ? 'Kênh thanh toán mô phỏng' : 'Thanh toán trực tiếp khi bàn giao'}
+                  {paymentMethod === 'online' ? 'Kênh thanh toán online' : 'Thanh toán trực tiếp khi bàn giao'}
                 </strong>
                 {paymentMethod === 'online' && (
                   <div className="payment-channels">
@@ -471,20 +471,20 @@ export default function Booking() {
 
       {step === 4 && (
         <Stage
-          eyebrow="BƯỚC 4 · THANH TOÁN MÔ PHỎNG"
+          eyebrow="BƯỚC 4 · THANH TOÁN"
           title="Xác nhận thanh toán."
-          text="Hoàn tất bước mô phỏng để giữ lịch và nhận hóa đơn."
+          text="Hoàn tất thanh toán để giữ lịch và nhận hóa đơn."
           summary={summary}
         >
           <div className="booking-panel">
             <div className="simulation-banner">
-              <strong>Đây là giao dịch mô phỏng</strong>
+              <strong>Lưu ý về thanh toán</strong>
               <span>Không kết nối VNPAY thật và không phát sinh tiền thật.</span>
             </div>
             <div className="payment-gateway">
               <div>
                 <small>TRẠM MÁY ẢNH · THANH TOÁN THỬ NGHIỆM</small>
-                <h2>VNPAY mô phỏng</h2>
+                <h2>Cổng thanh toán</h2>
                 <span>Mã đơn: {order.code}</span>
                 {order.expiresAt && <span>Giữ lịch đến {formatDateTime(order.expiresAt)}</span>}
               </div>
@@ -498,10 +498,10 @@ export default function Booking() {
                 <span>Không cần nhập thông tin thanh toán thật</span>
               </div>
               <UiButton className="gateway-button" disabled={sending} onClick={completePayment}>
-                {sending ? 'Đang xử lý…' : 'Mô phỏng thanh toán thành công'}
+                {sending ? 'Đang xử lý…' : 'Thanh toán thành công'}
               </UiButton>
               <UiButton className="secondary" disabled={sending} onClick={failPayment}>
-                Mô phỏng thanh toán thất bại
+                Thanh toán thất bại
               </UiButton>
             </div>
             <p className="booking-error">{error}</p>
@@ -522,11 +522,7 @@ export default function Booking() {
             </div>
             <b>
               {order.invoiceCode ? (
-                <>
-                  HÓA ĐƠN
-                  <br />
-                  MÔ PHỎNG
-                </>
+                <>HÓA ĐƠN</>
               ) : (
                 <>
                   CHỜ
@@ -559,7 +555,7 @@ export default function Booking() {
               <Review label="Thời gian thuê" value={`${dateText(startDate)} – ${dateText(endDate)}`} />
               <Review
                 label="Hình thức thanh toán"
-                value={paymentMethod === 'online' ? 'VNPAY mô phỏng' : 'Thanh toán khi nhận máy (mô phỏng)'}
+                value={paymentMethod === 'online' ? 'Thanh toán online' : 'Thanh toán khi nhận máy'}
               />
             </div>
             {items.map(item => (

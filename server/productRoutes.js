@@ -30,7 +30,7 @@ router.get('/products', async (req, res) => {
       'action-camera': item => item.category === 'video' && /action|gopro|insta360/.test(item.id),
       'studio-light': item => item.category === 'light',
       flash: item => item.category === 'flash',
-      'light-stand': item => item.category === 'accessory' && /260t|1004bac|195s/.test(item.id)
+      'light-stand': item => item.category === 'accessory' && /260t|1004bac|195s|la-300|a2030d/.test(item.id)
     };
     if (matches[subcategory]) result = result.filter(matches[subcategory]);
   }

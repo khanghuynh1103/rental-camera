@@ -91,7 +91,7 @@ export default function About() {
                 },
                 {
                   title: 'Gửi yêu cầu thuê',
-                  description: 'Điền thông tin giao nhận và xác nhận phương thức thanh toán mô phỏng.'
+                  description: 'Điền thông tin giao nhận và xác nhận phương thức thanh toán.'
                 },
                 {
                   title: 'Theo dõi đơn và nhận máy',

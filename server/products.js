@@ -12,8 +12,7 @@ const cameraProducts = [
     status: 'Có thể thuê',
     stock: 3,
     featured: true,
-    rentalCount: 48,
-    images: ['/products/sony-alpha-a7-iv/front.png', '/products/sony-alpha-a7-iv/left.png']
+    rentalCount: 48
   },
   {
     id: 'canon-eos-r6-mark-ii',
@@ -26,8 +25,7 @@ const cameraProducts = [
     status: 'Còn 2 máy',
     stock: 2,
     featured: true,
-    rentalCount: 41,
-    images: ['/products/canon-eos-r6-mark-ii/front.png', '/products/canon-eos-r6-mark-ii/right.png']
+    rentalCount: 41
   },
   {
     id: 'fujifilm-x-t5',
@@ -40,8 +38,7 @@ const cameraProducts = [
     status: 'Có thể thuê',
     stock: 3,
     featured: true,
-    rentalCount: 36,
-    images: ['/products/fujifilm-x-t5/front.png', '/products/fujifilm-x-t5/left.png']
+    rentalCount: 36
   },
   {
     id: 'nikon-z6-ii',
@@ -52,8 +49,7 @@ const cameraProducts = [
     spec: '24,5MP · 4K UHD · Hai bộ xử lý',
     price: 430000,
     status: 'Có thể thuê',
-    stock: 3,
-    images: ['/products/nikon-z6-ii/front.png', '/products/nikon-z6-ii/right.png']
+    stock: 3
   },
   {
     id: 'panasonic-lumix-s5-ii',
@@ -64,8 +60,7 @@ const cameraProducts = [
     spec: '24,2MP · 6K 30p · Phase Hybrid AF',
     price: 460000,
     status: 'Còn 1 máy',
-    stock: 1,
-    images: ['/products/panasonic-lumix-s5-ii/front.png', '/products/panasonic-lumix-s5-ii/left.png']
+    stock: 1
   },
   {
     id: 'sony-zv-e10',
@@ -76,20 +71,7 @@ const cameraProducts = [
     spec: '24,2MP · 4K 30p · Tối ưu quay vlog',
     price: 260000,
     status: 'Có thể thuê',
-    stock: 4,
-    images: ['/products/sony-zv-e10/front.png', '/products/sony-zv-e10/right.png']
-  },
-  {
-    id: 'canon-eos-r8',
-    brand: 'canon',
-    brandLabel: 'Canon',
-    format: 'Full-frame',
-    name: 'Canon EOS R8',
-    spec: '24,2MP · 4K 60p · Nhỏ gọn',
-    price: 410000,
-    status: 'Có thể thuê',
-    stock: 3,
-    images: ['/products/canon-eos-r8/front.png', '/products/canon-eos-r8/left.png']
+    stock: 4
   },
   {
     id: 'fujifilm-x-s20',
@@ -100,8 +82,7 @@ const cameraProducts = [
     spec: '26,1MP · 6,2K 30p · Chống rung IBIS',
     price: 330000,
     status: 'Có thể thuê',
-    stock: 3,
-    images: ['/products/fujifilm-x-s20/front.png', '/products/fujifilm-x-s20/right.png']
+    stock: 3
   },
   {
     id: 'nikon-z-fc',
@@ -112,8 +93,7 @@ const cameraProducts = [
     spec: '20,9MP · 4K UHD · Phong cách hoài cổ',
     price: 290000,
     status: 'Còn 2 máy',
-    stock: 2,
-    images: ['/products/nikon-z-fc/front.png', '/products/nikon-z-fc/left.png']
+    stock: 2
   },
   {
     id: 'sony-fx3',
@@ -124,8 +104,7 @@ const cameraProducts = [
     spec: 'Full-frame · 4K 120p · Cinema Line',
     price: 680000,
     status: 'Còn 1 máy',
-    stock: 1,
-    images: ['/products/sony-fx3/front.png', '/products/sony-fx3/right.png']
+    stock: 1
   }
 ];
 

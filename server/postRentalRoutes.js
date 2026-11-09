@@ -89,9 +89,7 @@ router.post('/account/rentals/:id/cancel', ...customerOnly, async (req, res) => 
     return cancelRentalTx(client, rental, req.user.id, `Khách hàng hủy đơn${reason ? `: ${reason}` : '.'}`);
   });
   res.json({
-    message: result.refunded
-      ? `Đã hủy đơn và hoàn ${result.refunded.toLocaleString('vi-VN')}đ (mô phỏng).`
-      : 'Đã hủy đơn thuê.',
+    message: result.refunded ? `Đã hủy đơn và hoàn ${result.refunded.toLocaleString('vi-VN')}đ.` : 'Đã hủy đơn thuê.',
     ...result
   });
 });
@@ -174,7 +172,7 @@ router.post('/account/charges/:id/payment', ...customerOnly, async (req, res) =>
     );
     return created.rows[0].invoice_code;
   });
-  res.json({ message: `Đã thanh toán mô phỏng khoản phí phát sinh. Hóa đơn ${invoice}.`, invoiceCode: invoice });
+  res.json({ message: `Đã thanh toán khoản phí phát sinh. Hóa đơn ${invoice}.`, invoiceCode: invoice });
 });
 
 router.get('/account/notifications', ...customerOnly, async (req, res) => {

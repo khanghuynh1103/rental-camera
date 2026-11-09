@@ -32,7 +32,7 @@ const steps = [
   {
     number: '04',
     title: 'Điền thông tin và xác nhận',
-    text: 'Chọn giao tận nơi hoặc nhận tại cửa hàng, nhập thông tin liên hệ rồi kiểm tra lại tổng tiền. Bạn có thể chọn thanh toán online hoặc khi nhận máy; phần thanh toán trên website hiện là mô phỏng.',
+    text: 'Chọn giao tận nơi hoặc nhận tại cửa hàng, nhập thông tin liên hệ rồi kiểm tra lại tổng tiền. Bạn có thể chọn thanh toán online hoặc khi nhận máy; phần thanh toán trên website hiện không phát sinh tiền thật.',
     image: '/how-to-rent/04-nhap-thong-tin.png',
     action: 'Xem thiết bị',
     to: '/products'

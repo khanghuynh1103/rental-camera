@@ -14,36 +14,6 @@ const item = (id, brandLabel, category, name, format, spec, price, stock = 3) =>
 
 export const newProducts = [
   item(
-    'sony-fe-24-70mm-f2-8-gm-ii',
-    'Sony',
-    'lens',
-    'Sony FE 24-70mm F2.8 GM II',
-    'Ống kính zoom',
-    'Full-frame · Khẩu độ F2.8 · Ngàm E',
-    320000,
-    2
-  ),
-  item(
-    'sony-fe-70-200mm-f2-8-gm-ii',
-    'Sony',
-    'lens',
-    'Sony FE 70-200mm F2.8 GM II',
-    'Ống kính tele',
-    'Chống rung OSS · Khẩu độ F2.8 · Ngàm E',
-    380000,
-    2
-  ),
-  item(
-    'canon-rf-15-35mm-f2-8-l',
-    'Canon',
-    'lens',
-    'Canon RF 15-35mm F2.8L IS',
-    'Ống kính góc rộng',
-    'Chống rung IS · Khẩu độ F2.8 · Ngàm RF',
-    350000,
-    2
-  ),
-  item(
     'canon-rf-50mm-f1-2-l',
     'Canon',
     'lens',
@@ -52,24 +22,6 @@ export const newProducts = [
     'Full-frame · Khẩu độ F1.2 · Ngàm RF',
     300000,
     2
-  ),
-  item(
-    'nikon-z-24-120mm-f4-s',
-    'Nikon',
-    'lens',
-    'Nikon Z 24-120mm F4 S',
-    'Ống kính đa dụng',
-    'Dải zoom 5x · Khẩu độ F4 · Ngàm Z',
-    280000
-  ),
-  item(
-    'nikon-z-85mm-f1-8-s',
-    'Nikon',
-    'lens',
-    'Nikon Z 85mm F1.8 S',
-    'Ống kính chân dung',
-    'Full-frame · Khẩu độ F1.8 · Ngàm Z',
-    230000
   ),
   item(
     'fujifilm-xf-23mm-f1-4-r-lm-wr',
@@ -97,15 +49,6 @@ export const newProducts = [
     'Ống kính tele',
     'Chống rung VC · Khẩu độ F2.8 · G2',
     260000
-  ),
-  item(
-    'panasonic-lumix-s-50mm-f1-8',
-    'Panasonic',
-    'lens',
-    'Lumix S 50mm F1.8',
-    'Ống kính chân dung',
-    'Full-frame · Khẩu độ F1.8 · Ngàm L',
-    180000
   ),
   item(
     'dji-rs-4-pro',
@@ -136,15 +79,6 @@ export const newProducts = [
     260000
   ),
   item(
-    'zhiyun-crane-m3s',
-    'Zhiyun',
-    'video',
-    'Zhiyun Crane M3S',
-    'Gimbal nhỏ gọn',
-    'Đèn tích hợp · Sạc nhanh · Bluetooth',
-    220000
-  ),
-  item(
     'dji-osmo-action-5-pro',
     'DJI',
     'video',
@@ -152,16 +86,6 @@ export const newProducts = [
     'Action camera',
     '4K 120fps · Chống rung · Chống nước',
     280000,
-    2
-  ),
-  item(
-    'gopro-hero13-black',
-    'GoPro',
-    'video',
-    'GoPro HERO13 Black',
-    'Action camera',
-    '5.3K 60fps · HyperSmooth · GPS',
-    300000,
     2
   ),
   item(
@@ -202,43 +126,6 @@ export const newProducts = [
     'Siêu định hướng · Low-cut · Nguồn phantom',
     170000
   ),
-  item(
-    'amaran-200x-s',
-    'Amaran',
-    'light',
-    'Amaran 200x S',
-    'Đèn LED Bi-color',
-    '200W · 2700-6500K · Sidus Link',
-    220000
-  ),
-  item(
-    'aputure-ls-300d-ii',
-    'Aputure',
-    'light',
-    'Aputure LS 300d II',
-    'Đèn LED Daylight',
-    '350W · 5500K · Bowens Mount',
-    300000,
-    2
-  ),
-  item(
-    'godox-sl150iii',
-    'Godox',
-    'light',
-    'Godox SL150III',
-    'Đèn LED Daylight',
-    '150W · 5600K · Điều khiển app',
-    160000
-  ),
-  item(
-    'nanlite-forza-60b-ii',
-    'Nanlite',
-    'light',
-    'Nanlite Forza 60B II',
-    'Đèn LED Bi-color',
-    '72W · 2700-6500K · Nhỏ gọn',
-    180000
-  ),
   item('godox-v1', 'Godox', 'flash', 'Godox V1', 'Đèn flash đầu tròn', 'TTL · HSS · Pin lithium', 130000),
   item('profoto-a10', 'Profoto', 'flash', 'Profoto A10', 'Đèn flash cao cấp', 'TTL · AirX · Đầu đèn tròn', 260000, 2),
   item(
@@ -269,5 +156,105 @@ export const newProducts = [
     'Chân đèn studio',
     'Chiều cao 385cm · Đệm khí · Tải trọng cao',
     120000
+  ),
+  item(
+    'dji-rs-4',
+    'DJI',
+    'video',
+    'DJI RS 4',
+    'Gimbal máy ảnh',
+    'Tải trọng 3kg · Khóa trục tự động · Bluetooth',
+    330000,
+    5
+  ),
+  item(
+    'dji-osmo-action-4',
+    'DJI',
+    'video',
+    'DJI Osmo Action 4',
+    'Action camera',
+    'Cảm biến 1/1,3 inch · 4K 120fps · Chống nước 18m',
+    220000,
+    5
+  ),
+  item(
+    'gopro-hero12-black',
+    'GoPro',
+    'video',
+    'GoPro Hero12 Black',
+    'Action camera',
+    '5,3K 60fps · HyperSmooth 6.0 · Chống nước 10m',
+    240000,
+    5
+  ),
+  item(
+    'rode-videomic-ntg',
+    'Rode',
+    'audio',
+    'Rode VideoMic NTG',
+    'Micro shotgun',
+    'Thu định hướng · USB-C · Pin sạc tích hợp',
+    110000,
+    5
+  ),
+  item(
+    'hollyland-lark-m2',
+    'Hollyland',
+    'audio',
+    'Hollyland Lark M2',
+    'Micro không dây',
+    '2 micro cài áo · Khử ồn · Hộp sạc',
+    120000,
+    5
+  ),
+  item(
+    'nanlite-fs-150',
+    'Nanlite',
+    'light',
+    'Nanlite FS-150',
+    'Đèn LED Daylight',
+    'Daylight 5600K · LED COB · Ngàm Bowens',
+    230000,
+    5
+  ),
+  item(
+    'sony-hvl-f60rm2',
+    'Sony',
+    'flash',
+    'Sony HVL-F60RM2',
+    'Đèn flash Sony',
+    'GN60 · Radio không dây · Ngàm MI',
+    230000,
+    5
+  ),
+  item(
+    'nikon-sb-700',
+    'Nikon',
+    'flash',
+    'Nikon SB-700',
+    'Đèn flash Nikon',
+    'i-TTL · Zoom 24-120mm · Điều khiển không dây',
+    150000,
+    5
+  ),
+  item(
+    'godox-la-300',
+    'Godox',
+    'accessory',
+    'Godox LA-300',
+    'Chân đèn',
+    'Chiều cao 300cm · Ba chân · Khóa nút vặn',
+    80000,
+    5
+  ),
+  item(
+    'avenger-a2030d',
+    'Avenger',
+    'accessory',
+    'Avenger A2030D',
+    'Chân đèn C-Stand',
+    'C-Stand · Chân tháo rời · Thép mạ chrome',
+    130000,
+    5
   )
 ];

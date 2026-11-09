@@ -4,7 +4,13 @@ import { api } from '../api';
 import { formatDateTime } from '../labels';
 import '../styles/workflow.css';
 
-const labels = { PENDING: 'Chờ gửi', SENDING: 'Đang gửi', SENT: 'Đã gửi', SIMULATED: 'Mô phỏng', FAILED: 'Thất bại' };
+const labels = {
+  PENDING: 'Chờ gửi',
+  SENDING: 'Đang gửi',
+  SENT: 'Đã gửi',
+  SIMULATED: 'Chưa gửi thật',
+  FAILED: 'Thất bại'
+};
 
 export default function AdminDeliveries() {
   const [data, setData] = useState(null),
@@ -42,8 +48,8 @@ export default function AdminDeliveries() {
       </div>
       {simulated && (
         <p className="hint warn">
-          Đang ở chế độ mô phỏng (email: {data.providers.email}, SMS: {data.providers.sms}): thông báo được ghi nhận
-          nhưng không gửi thật.
+          Chưa bật gửi thật (email: {data.providers.email}, SMS: {data.providers.sms}): thông báo được ghi nhận nhưng
+          không gửi thật.
         </p>
       )}
       {message && <p className="admin-message">{message}</p>}

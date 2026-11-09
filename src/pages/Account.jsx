@@ -323,7 +323,7 @@ function RentalDetail({ id, close, onChanged, setMessage, extend, goIdentity }) 
         <div className="row-actions detail-actions">
           {rental.canPay && (
             <UiButton className="admin-primary" onClick={() => run(() => api.completePayment(rental.id))}>
-              Thanh toán online mô phỏng {money(rental.payment.amount)}
+              Thanh toán online {money(rental.payment.amount)}
             </UiButton>
           )}
           {rental.canExtend && <UiButton onClick={() => extend(rental)}>Yêu cầu gia hạn</UiButton>}
@@ -341,7 +341,7 @@ function RentalDetail({ id, close, onChanged, setMessage, extend, goIdentity }) 
             </label>
             <p className="hint">
               {rental.payment.status === 'PAID_SIMULATED'
-                ? `Tiền thuê ${money(rental.payment.amount)} sẽ được hoàn (mô phỏng).`
+                ? `Tiền thuê ${money(rental.payment.amount)} sẽ được hoàn.`
                 : 'Đơn chưa thanh toán nên không phát sinh hoàn tiền.'}
             </p>
             <div>
@@ -535,7 +535,7 @@ function ChargeList({ items, pay }) {
             <h3>{chargeTypeLabels[x.chargeType] || x.chargeType}</h3>
             <p>{x.description}</p>
             <strong>{money(x.amount)}</strong>
-            {x.paymentStatus === 'PENDING' && <UiButton onClick={() => pay(x.id)}>Thanh toán mô phỏng</UiButton>}
+            {x.paymentStatus === 'PENDING' && <UiButton onClick={() => pay(x.id)}>Thanh toán</UiButton>}
           </article>
         ))}
       </div>

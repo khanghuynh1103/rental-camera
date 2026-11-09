@@ -11,21 +11,6 @@ const categoryNames = {
   flash: 'Đèn flash',
   accessory: 'Phụ kiện'
 };
-const hiddenProducts = new Set([
-  'amaran-200x-s',
-  'aputure-ls-300d-ii',
-  'canon-eos-r8',
-  'canon-rf-15-35mm-f2-8-l',
-  'godox-sl150iii',
-  'gopro-hero13-black',
-  'nanlite-forza-60b-ii',
-  'nikon-z-24-120mm-f4-s',
-  'nikon-z-85mm-f1-8-s',
-  'panasonic-lumix-s-50mm-f1-8',
-  'sony-fe-24-70mm-f2-8-gm-ii',
-  'sony-fe-70-200mm-f2-8-gm-ii',
-  'zhiyun-crane-m3s'
-]);
 
 try {
   const database = await testDatabaseConnection();
@@ -59,7 +44,7 @@ try {
         product.price,
         product.deposit,
         Boolean(product.featured),
-        !hiddenProducts.has(product.id),
+        true,
         product.rentalCount || 0
       ]
     );
